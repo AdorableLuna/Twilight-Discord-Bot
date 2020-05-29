@@ -3,6 +3,9 @@ import json
 import re
 import asyncio
 
+from collections import deque
+import itertools
+
 from discord.utils import get
 from discord.ext import commands
 
@@ -13,15 +16,21 @@ class Generate(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-        self.tanks = []
-        self.healers = []
-        self.dps = []
+        self.tanks = deque()
+        self.healers = deque()
+        self.dps = deque()
+
+        self.tankHasKey = False
+        self.healerHasKey = False
+        self.dpsOneHasKey = False
+        self.dpsTwoHasKey = False
 
     @commands.Cog.listener()
     async def on_ready(self):
         self.tankEmoji = self.client.get_emoji(714930608266018859)
         self.healerEmoji = self.client.get_emoji(714930600267612181)
         self.dpsEmoji = self.client.get_emoji(714930578461425724)
+        self.keystoneEmoji = self.client.get_emoji(715918950092898346)
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
@@ -39,6 +48,23 @@ class Generate(commands.Cog):
 
         if str(reaction.emoji) == str(self.dpsEmoji):
             self.dps.append(user)
+
+        if str(reaction.emoji) == str(self.keystoneEmoji):
+            if not self.tankHasKey and user in self.tanks:
+                self.tanks.appendleft(user)
+                self.tankHasKey = True
+
+            if not self.healerHasKey and user in self.healers:
+                self.healers.appendleft(user)
+                self.healerHasKey = True
+
+            if user in self.dps:
+                if not self.dpsOneHasKey:
+                    self.dps.appendleft(user)
+                    self.dpsOneHasKey = True
+                if not self.dpsTwoHasKey:
+                    self.dps.appendleft(user)
+                    self.dpsTwoHasKey = True
 
         if str(reaction.emoji) == str("\U0001F1F9"):
             self.waitTimer.cancel()
@@ -66,13 +92,17 @@ class Generate(commands.Cog):
 
     @commands.command()
     async def generate(self, ctx):
-        # Clear the lists
+        # Clear the lists - TODO: Move to own function
         self.tanks.clear()
         self.healers.clear()
         self.dps.clear()
         self.team = ""
         self.author = ctx.message.author
         self.cancelled = False
+        self.tankHasKey = False
+        self.healerHasKey = False
+        self.dpsOneHasKey = False
+        self.dpsTwoHasKey = False
 
         msg = ctx.message.content[10:]
         result = [x.strip() for x in re.split(' ', msg)]
@@ -113,6 +143,7 @@ class Generate(commands.Cog):
             await self.msg.add_reaction(self.dpsEmoji)
 
             # Keystone
+            await self.msg.add_reaction(self.keystoneEmoji)
 
             # Team
             await self.msg.add_reaction("\U0001F1F9")
@@ -120,7 +151,7 @@ class Generate(commands.Cog):
             # Cancel
             await self.msg.add_reaction("\U0000274C")
 
-            # Done - Add logic
+            # Done - TODO: Add logic
             await self.msg.add_reaction("\U00002705")
 
             # TODO: change timer duration
@@ -176,6 +207,7 @@ async def createGroup(self, ctx, msg, embed, keystone):
     if self.team:
         tank = healer = self.team
         dps = [self.team, self.team]
+        keystoneHolder = self.team
     else:
         try:
             tank = self.tanks[0]
@@ -189,12 +221,25 @@ async def createGroup(self, ctx, msg, embed, keystone):
             await ctx.message.channel.send(':x: There is not a healer (that meets the criteria) to fill the group. :x:', delete_after=15.0)
             return
 
-        dps = self.dps[:2]
+        dps = list(itertools.islice(self.dps, 0, 2))
         if len(dps) != 2:
             await ctx.message.channel.send(':x: There are not enough DPS (that meet the criteria) to fill the group. :x:', delete_after=15.0)
             # return
 
-    # Mention the group members
+    if not self.team and not self.dpsTwoHasKey and not self.dpsOneHasKey and not self.healerHasKey and not self.tankHasKey:
+        await ctx.message.channel.send(':x: There is no one who has the specific key to complete this run. :x:', delete_after=15.0)
+        return
+
+    if self.dpsTwoHasKey:
+        keystoneHolder = dps[1]
+    if self.dpsOneHasKey:
+        keystoneHolder = dps[0]
+    if self.healerHasKey:
+        keystoneHolder = healer
+    if self.tankHasKey:
+        keystoneHolder = tank
+
+    # Mention the group members - TODO: Change to dps
     tank.mention
     healer.mention
     tank.mention
@@ -210,7 +255,7 @@ async def createGroup(self, ctx, msg, embed, keystone):
 
     embed.title = f"Mythic +{keystone} Group"
     embed.description = f"{self.tankEmoji} {tank.mention}\n{self.healerEmoji} {healer.mention}\n{self.dpsEmoji} {tank.mention}\n{self.dpsEmoji} {healer.mention}"
-    embed.add_field(name="Keystone Holder", value="TBD", inline=True)
+    embed.add_field(name="Keystone Holder", value=keystoneHolder.mention, inline=True)
 
     await msg.edit(embed=embed)
     # await ctx.message.channel.send(embed=group)
