@@ -174,6 +174,8 @@ def checkRoles(self, user, emoji):
     guild = self.client.get_guild(config["GUILD_ID"])
     isValid = False
 
+    if (str(emoji) == str("\U0000274C")): return True
+
     if int(self.keystone) >= 18:
         keystoneRole = discord.utils.find(lambda r: r.name == 'Legendary', guild.roles)
     if int(self.keystone) <= 17:
