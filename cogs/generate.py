@@ -2,109 +2,73 @@ import discord
 import json
 import re
 import asyncio
-
-from collections import deque
+import datetime
+import time
 import itertools
 
 from discord.utils import get
 from discord.ext import commands
 
+from .lib import config
+
 with open('./config.json', 'r') as cjson:
-    config = json.load(cjson)
+    botConfig = json.load(cjson)
 
 class Generate(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-        self.tanks = deque()
-        self.healers = deque()
-        self.dps = deque()
-
-        self.tankHasKey = False
-        self.healerHasKey = False
-        self.dpsOneHasKey = False
-        self.dpsTwoHasKey = False
+        self.config = config.Config('mythicplus.json')
+        self.duration = datetime.timedelta(seconds=15)
 
     @commands.Cog.listener()
     async def on_ready(self):
+        self.guild = self.client.get_guild(botConfig["GUILD_ID"])
         self.tankEmoji = self.client.get_emoji(714930608266018859)
         self.healerEmoji = self.client.get_emoji(714930600267612181)
         self.dpsEmoji = self.client.get_emoji(714930578461425724)
-        self.keystoneEmoji = self.client.get_emoji(715918950092898346)
+        self.tankKeystoneEmoji = self.client.get_emoji(717694999835181069)
+        self.healerKeystoneEmoji = self.client.get_emoji(717695016323121173)
+        self.dpsKeystoneEmoji = self.client.get_emoji(717695025949180053)
+        self.teamEmoji = "\U0001F1F9"
+        self.cancelEmoji = "\U0000274C"
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
-        if not checkRoles(self, user, reaction.emoji):
-            return
+        if self.client.user == user: return
 
-        if self.client.user == user:
-            return
+        if str(reaction.emoji) == str(self.teamEmoji):
+            embed = reaction.message.embeds[0]
+            keystone = re.findall(r'\d+', embed.title)[0]
+            armor = embed.fields[5].value
 
-        if str(reaction.emoji) == str(self.tankEmoji):
-            self.tanks.append(user)
+            # If the group was already edited (team), then return
+            if "created" in embed.footer.text: return
 
-        if str(reaction.emoji) == str(self.healerEmoji):
-            self.healers.append(user)
+            if armor != "Any":
+                armor = re.sub('[<@&>]', '', armor)
+                if int(armor) not in [y.id for y in user.roles]: return
+            if not self.checkRoles(user, "Any", keystone): return
 
-        if str(reaction.emoji) == str(self.dpsEmoji):
-            self.dps.append(user)
+            tank = healer = user
+            dps = [user, user]
+            keystoneHolder = user
+            group = [tank, healer, dps]
 
-        if str(reaction.emoji) == str(self.keystoneEmoji):
-            if not self.tankHasKey and user in self.tanks:
-                self.tanks.appendleft(user)
-                self.tankHasKey = True
+            await self.createGroup(reaction.message, group, keystone, keystoneHolder)
 
-            if not self.healerHasKey and user in self.healers:
-                self.healers.appendleft(user)
-                self.healerHasKey = True
+        if str(reaction.emoji) == str(self.cancelEmoji):
+            author = reaction.message.embeds[0].fields[6].value
 
-            if user in self.dps:
-                if not self.dpsOneHasKey:
-                    self.dps.appendleft(user)
-                    self.dpsOneHasKey = True
-                if not self.dpsTwoHasKey:
-                    self.dps.appendleft(user)
-                    self.dpsTwoHasKey = True
-
-        if str(reaction.emoji) == str("\U0001F1F9"):
-            self.waitTimer.cancel()
-            self.team = user
-
-        if str(reaction.emoji) == str("\U0000274C"):
-            if user == self.author:
-                self.cancelled = True
-                self.waitTimer.cancel()
-                await self.msg.delete()
-
-    @commands.Cog.listener()
-    async def on_reaction_remove(self, reaction, user):
-        if self.client.user == user:
-            return
-
-        if str(reaction.emoji) == str(self.tankEmoji):
-            self.tanks.remove(user)
-
-        if str(reaction.emoji) == str(self.healerEmoji):
-            self.healers.remove(user)
-
-        if str(reaction.emoji) == str(self.dpsEmoji):
-            self.dps.remove(user)
+            if user.mention == author:
+                await reaction.message.delete()
 
     @commands.command()
     async def generate(self, ctx):
-        # Clear the lists - TODO: Move to own function
-        self.tanks.clear()
-        self.healers.clear()
-        self.dps.clear()
-        self.team = ""
-        self.author = ctx.message.author
-        self.cancelled = False
-        self.tankHasKey = False
-        self.healerHasKey = False
-        self.dpsOneHasKey = False
-        self.dpsTwoHasKey = False
-
         msg = ctx.message.content[10:]
+        duration = ctx.message.created_at + self.duration
+        countdown = float(duration.timestamp()) - datetime.datetime.utcnow().timestamp()
+        countdown = time.strftime('%H:%M:%S', time.gmtime(countdown))
         result = [x.strip() for x in re.split(' ', msg)]
 
         count = 6
@@ -115,152 +79,237 @@ class Generate(commands.Cog):
 
         # TODO: change numbers
         if len(result) >= 6:
-            self.keystone = result[2]
-            self.armor = result[5]
+            keystone = result[2]
+
+            if(result[5] != "Any"):
+                armor = self.getRole(result[5]).mention
+            else:
+                armor = "Any"
+                self.getRole("Cloth").mention
+                self.getRole("Leather").mention
+                self.getRole("Mail").mention
+                self.getRole("Plate").mention
 
             embed = discord.Embed(title=f"Generating Mythic +{result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n" +
-                                "The group will be determined in x minutes.", color=0x5cf033)
+                                f"The group will be created within {countdown}.", color=0x5cf033)
             embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
             embed.add_field(name="Faction", value=result[1], inline=True)
             embed.add_field(name="Payment Realm", value=result[0], inline=True)
             embed.add_field(name="Gold Pot", value=result[3], inline=True)
             embed.add_field(name="Keystone Level", value=result[2], inline=True)
             embed.add_field(name="Dungeon", value=result[4], inline=True)
-            embed.add_field(name="Armor Type", value=result[5], inline=True)
+            embed.add_field(name="Armor Type", value=armor, inline=True)
+            embed.add_field(name="Advertiser", value=ctx.message.author.mention)
 
             if advertiserNote:
                 embed.add_field(name="Advertiser Note", value=advertiserNote, inline=False)
 
-            self.msg = await ctx.message.channel.send(embed=embed)
+            msg = await ctx.message.channel.send(embed=embed)
 
             # Tank
-            await self.msg.add_reaction(self.tankEmoji)
+            await msg.add_reaction(self.tankEmoji)
 
             # Healer
-            await self.msg.add_reaction(self.healerEmoji)
+            await msg.add_reaction(self.healerEmoji)
 
             # DPS
-            await self.msg.add_reaction(self.dpsEmoji)
+            await msg.add_reaction(self.dpsEmoji)
 
-            # Keystone
-            await self.msg.add_reaction(self.keystoneEmoji)
+            # Keystones
+            await msg.add_reaction(self.tankKeystoneEmoji)
+            await msg.add_reaction(self.healerKeystoneEmoji)
+            await msg.add_reaction(self.dpsKeystoneEmoji)
 
             # Team
-            await self.msg.add_reaction("\U0001F1F9")
+            await msg.add_reaction("\U0001F1F9")
 
             # Cancel
-            await self.msg.add_reaction("\U0000274C")
+            await msg.add_reaction("\U0000274C")
 
             # Done - TODO: Add logic
-            await self.msg.add_reaction("\U00002705")
+            await msg.add_reaction("\U00002705")
 
-            # TODO: change timer duration
-            self.waitTimer = asyncio.create_task(asyncio.sleep(10))
-            try:
-                await self.waitTimer
-            except asyncio.CancelledError:
-                if self.cancelled:
-                    return
-                else:
-                    pass
+            await self.config.put(duration.timestamp(), msg.id)
 
-            await createGroup(self, ctx, self.msg, embed, result[2])
+            embed.set_footer(text=f"Group id: {msg.id}.")
+
+            msg = await msg.edit(embed=embed)
+
+            await self.prepareGroup(ctx.message.channel, result[5], keystone)
 
         else:
             # Needs more/less fields
             await ctx.message.channel.send(':x: The command you have entered is invalid. Please check the correct formatting in the pins. :x:', delete_after=10.0)
 
-def checkRoles(self, user, emoji):
-    guild = self.client.get_guild(config["GUILD_ID"])
-    isValid = False
+    async def prepareGroup(self, channel, armor, keystone):
+        # channels / emoji aren't loaded before being ready
+        await self.client.wait_until_ready()
 
-    if (str(emoji) == str("\U0000274C")): return True
+        while self.config:
+            oldest = min(self.config.all())
+            message_id = self.config.get(oldest)
+            await self.config.remove(oldest)
 
-    if int(self.keystone) >= 18:
-        keystoneRole = discord.utils.find(lambda r: r.name == 'Legendary', guild.roles)
-    if int(self.keystone) <= 17:
-        keystoneRole = discord.utils.find(lambda r: r.name == 'Epic', guild.roles)
-    if int(self.keystone) <= 14:
-        keystoneRole = discord.utils.find(lambda r: r.name == 'Rare', guild.roles)
+            timeToSleep = float(oldest) - datetime.datetime.utcnow().timestamp()
+            await asyncio.sleep(timeToSleep)
 
-    userRoles = user.roles
+            try:
+                message = await channel.fetch_message(message_id)
 
-    if keystoneRole in userRoles:
-        isValid = True
+                # If the group was already edited (team), then return
+                if ("created" in message.embeds[0].footer.text): return
 
-    if self.armor != "Any":
-        armorRole = discord.utils.find(lambda r: r.name == self.armor, guild.roles)
+                tanksEmoji = self.getEmoji(message, self.tankEmoji)
+                healersEmoji = self.getEmoji(message, self.healerEmoji)
+                dpsEmoji = self.getEmoji(message, self.dpsEmoji)
+                tankKeystoneEmoji = self.getEmoji(message, self.tankKeystoneEmoji)
+                healerKeystoneEmoji = self.getEmoji(message, self.healerKeystoneEmoji)
+                dpsKeystoneEmoji = self.getEmoji(message, self.dpsKeystoneEmoji)
 
-        if armorRole in userRoles:
+                tanks = await self.getReactedUsers(tanksEmoji, armor, keystone, "Tank")
+                healers = await self.getReactedUsers(healersEmoji, armor, keystone, "Healer")
+                dps = await self.getReactedUsers(dpsEmoji, armor, keystone, "Damage")
+
+                tankKeystone = await self.getReactedUsers(tankKeystoneEmoji, armor, keystone, "Tank")
+                healerKeystone = await self.getReactedUsers(healerKeystoneEmoji, armor, keystone, "Healer")
+                dpsKeystone = await self.getReactedUsers(dpsKeystoneEmoji, armor, keystone, "Damage")
+
+                tankHasKey = False
+                healerHasKey = False
+                dpsOneHasKey = False
+                dpsTwoHasKey = False
+
+                try:
+                    for user in tanks:
+                        if user in tankKeystone and not tankHasKey:
+                            tanks.remove(user)
+                            tanks.insert(0, user)
+                            tankHasKey = True
+
+                    tank = tanks[0]
+
+                    # remove for testing
+                    if tank in healers:
+                        healers.remove(tank)
+                    if tank in dps:
+                        dps.remove(tank)
+                except:
+                    await channel.send(f':x: There is not a tank (that meets the criteria) to fill the group. Group id: {message_id} :x:', delete_after=15.0)
+                    return
+
+                try:
+                    for user in healers:
+                        if user in healerKeystone and not healerHasKey:
+                            healers.remove(user)
+                            healers.insert(0, user)
+                            healerHasKey = True
+
+                    healer = healers[0]
+
+                    # remove for testing
+                    if healer in tank:
+                        tank.remove(healer)
+                    if healer in dps:
+                        dps.remove(healer)
+                except:
+                    await channel.send(f':x: There is not a healer (that meets the criteria) to fill the group. Group id: {message_id} :x:', delete_after=15.0)
+                    return
+
+                for user in dps:
+                    if user in dpsKeystone:
+                        if not dpsOneHasKey:
+                            dps.remove(user)
+                            dps.insert(0, user)
+                            dpsOneHasKey = True
+                        if not dpsTwoHasKey:
+                            dps.remove(user)
+                            dps.insert(1, user)
+                            dpsTwoHasKey = True
+
+                dps = list(itertools.islice(dps, 0, 2))
+                if len(dps) != 2:
+                    await channel.send(f':x: There are not enough DPS (that meet the criteria) to fill the group. Group id: {message_id} :x:', delete_after=15.0)
+                    # return
+
+                group = [tank, healer, dps]
+
+                if dpsTwoHasKey:
+                    keystoneHolder = dps[0] # TODO: change to [1]
+                elif dpsOneHasKey:
+                    keystoneHolder = dps[0]
+                elif healerHasKey:
+                    keystoneHolder = healer
+                elif tankHasKey:
+                    keystoneHolder = tank
+                else:
+                    await channel.send(f':x: There is no one who has the specific key to complete this run. Group id: {message_id} :x:', delete_after=15.0)
+                    return
+
+                await self.createGroup(message, group, keystone, keystoneHolder)
+
+            except discord.NotFound:
+                # Incase the message was deleted by someone, then skip
+                continue
+
+    async def createGroup(self, msg, group, keystone, keystoneHolder):
+        tank = group[0]
+        healer = group[1]
+        dps = group[2]
+
+        # Mention the group members - TODO: add dps
+        tank.mention
+        healer.mention
+
+        embed = msg.embeds[0]
+        embed.title = f"Generated Mythic +{keystone} Group"
+        embed.description = f"{self.tankEmoji} {tank.mention}\n{self.healerEmoji} {healer.mention}\n{self.dpsEmoji} {tank.mention}\n{self.dpsEmoji} {healer.mention}"
+        embed.add_field(name="Keystone Holder", value=keystoneHolder.mention, inline=True)
+        embed.set_footer(text=f"{embed.footer.text} Group created at: {datetime.datetime.now().strftime('%H:%M:%S')}")
+
+        await msg.edit(embed=embed)
+
+    def checkRoles(self, user, armor, keystone, role = "Any"):
+        isValid = False
+
+        if int(keystone) >= 18:
+            keystoneRole = self.getRole("Legendary")
+        if int(keystone) <= 17:
+            keystoneRole = self.getRole("Epic")
+        if int(keystone) <= 14:
+            keystoneRole = self.getRole("Rare")
+
+        userRoles = user.roles
+
+        if keystoneRole in userRoles:
             isValid = True
         else:
-            isValid = False
+            return False
 
-    if str(emoji) == str("\U0001F1F9"):
-        teamRole = discord.utils.find(lambda r: r.name == 'Mythic+ Team', guild.roles)
-        if teamRole in userRoles:
-            isValid = True
-        else:
-            isValid = False
+        if role != "Any":
+            role = self.getRole(role)
+            if role in userRoles:
+                isValid = True
+            else:
+                return False
 
-    return isValid
+        if armor != "Any":
+            armorRole = self.getRole(armor)
 
-async def createGroup(self, ctx, msg, embed, keystone):
-    if self.team:
-        tank = healer = self.team
-        dps = [self.team, self.team]
-        keystoneHolder = self.team
-    else:
-        try:
-            tank = self.tanks[0]
-        except:
-            await ctx.message.channel.send(':x: There is not a tank (that meets the criteria) to fill the group. :x:', delete_after=15.0)
-            return
+            if armorRole in userRoles:
+                isValid = True
+            else:
+                return False
 
-        try:
-            healer = self.healers[0]
-        except:
-            await ctx.message.channel.send(':x: There is not a healer (that meets the criteria) to fill the group. :x:', delete_after=15.0)
-            return
+        return isValid
 
-        dps = list(itertools.islice(self.dps, 0, 2))
-        if len(dps) != 2:
-            await ctx.message.channel.send(':x: There are not enough DPS (that meet the criteria) to fill the group. :x:', delete_after=15.0)
-            # return
+    def getRole(self, role):
+        return discord.utils.find(lambda r: r.name == role, self.guild.roles)
 
-    if not self.team and not self.dpsTwoHasKey and not self.dpsOneHasKey and not self.healerHasKey and not self.tankHasKey:
-        await ctx.message.channel.send(':x: There is no one who has the specific key to complete this run. :x:', delete_after=15.0)
-        return
+    def getEmoji(self, message, targetEmoji):
+        return next(x for x in message.reactions if getattr(x.emoji, 'id', None) == targetEmoji.id)
 
-    if self.dpsTwoHasKey:
-        keystoneHolder = dps[1]
-    if self.dpsOneHasKey:
-        keystoneHolder = dps[0]
-    if self.healerHasKey:
-        keystoneHolder = healer
-    if self.tankHasKey:
-        keystoneHolder = tank
-
-    # Mention the group members - TODO: Change to dps
-    tank.mention
-    healer.mention
-    tank.mention
-    healer.mention
-
-                        #change to dps[0]    change to dps[1]
-    # group = discord.Embed(title="Mythic+ group made!", description=
-    #                     f"{self.tankEmoji} {tank.mention}\n" +
-    #                     f"{self.healerEmoji} {healer.mention}\n" +
-    #                     f"{self.dpsEmoji} {tank.mention}\n" +
-    #                     f"{self.dpsEmoji} {healer.mention}\n\n" +
-    #                     "You are in this boosting run.\nSee this bot's post above for the details.", color=0x5cf033)
-
-    embed.title = f"Mythic +{keystone} Group"
-    embed.description = f"{self.tankEmoji} {tank.mention}\n{self.healerEmoji} {healer.mention}\n{self.dpsEmoji} {tank.mention}\n{self.dpsEmoji} {healer.mention}"
-    embed.add_field(name="Keystone Holder", value=keystoneHolder.mention, inline=True)
-
-    await msg.edit(embed=embed)
-    # await ctx.message.channel.send(embed=group)
+    async def getReactedUsers(self, targetEmoji, armor, keystone, role = "Any"):
+        return await targetEmoji.users().filter(lambda user: not user.bot and self.checkRoles(user, armor, keystone, role)).flatten()
 
 def setup(client):
     client.add_cog(Generate(client))
