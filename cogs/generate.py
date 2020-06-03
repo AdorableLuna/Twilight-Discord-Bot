@@ -4,6 +4,7 @@ import re
 import asyncio
 import datetime
 import time
+import itertools
 
 from discord.utils import get
 from discord.ext import commands
@@ -27,9 +28,6 @@ class Generate(commands.Cog):
         self.healerEmoji = self.client.get_emoji(714930600267612181)
         self.dpsEmoji = self.client.get_emoji(714930578461425724)
         self.keystoneEmoji = self.client.get_emoji(715918950092898346)
-        self.tankKeystoneEmoji = self.client.get_emoji(717694999835181069)
-        self.healerKeystoneEmoji = self.client.get_emoji(717695016323121173)
-        self.dpsKeystoneEmoji = self.client.get_emoji(717695025949180053)
         self.teamEmoji = "\U0001F1F9"
         self.cancelEmoji = "\U0000274C"
         self.doneEmoji = "\U00002705"
@@ -41,6 +39,7 @@ class Generate(commands.Cog):
         if str(reaction.emoji) == str(self.teamEmoji):
             embed = reaction.message.embeds[0]
             keystone = re.findall(r'\d+', embed.title)[0]
+            faction = embed.fields[0].value
             armor = embed.fields[5].value
 
             # If the group was already edited (team), then return
@@ -49,7 +48,7 @@ class Generate(commands.Cog):
             if armor != "Any":
                 armor = re.sub('[<@&>]', '', armor)
                 if int(armor) not in [y.id for y in user.roles]: return
-            if not self.checkRoles(user, "Any", keystone): return
+            if not self.checkRoles(user, faction, "Any", keystone): return
 
             tank = healer = user
             dps = [user, user]
@@ -83,6 +82,17 @@ class Generate(commands.Cog):
         if len(result) >= 7:
             keystone = result[3]
             mentions = ""
+
+            if int(keystone) >= 15:
+                if result[2] == "Horde":
+                    keystoneRole = self.getRole("Highkey Booster Horde").mention
+                elif result[2] == "Alliance":
+                    keystoneRole = self.getRole("Highkey Booster Alliance").mention
+                mentions += keystoneRole + " "
+            elif int(keystone) >= 10 and int(keystone) <= 14:
+                keystoneRole = self.getRole("Mplus Booster").mention
+                mentions += keystoneRole + " "
+
             tankRole = self.getRole("Tank").mention
             healerRole = self.getRole("Healer").mention
             damageRole = self.getRole("Damage").mention
@@ -93,11 +103,6 @@ class Generate(commands.Cog):
                 mentions += armor
             else:
                 armor = "Any"
-                cloth = self.getRole("Cloth").mention
-                leather = self.getRole("Leather").mention
-                mail = self.getRole("Mail").mention
-                plate = self.getRole("Plate").mention
-                mentions += cloth + " " + leather + " " + mail + " " + plate
 
             embed = discord.Embed(title=f"Generating Mythic +{result[3]} run!", description="Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n" +
                                 f"The group will be created within {countdown}.", color=0x5cf033)
@@ -125,9 +130,7 @@ class Generate(commands.Cog):
             await msg.add_reaction(self.dpsEmoji)
 
             # Keystones
-            await msg.add_reaction(self.tankKeystoneEmoji)
-            await msg.add_reaction(self.healerKeystoneEmoji)
-            await msg.add_reaction(self.dpsKeystoneEmoji)
+            await msg.add_reaction(self.keystoneEmoji)
 
             # Team
             await msg.add_reaction(self.teamEmoji)
@@ -144,13 +147,13 @@ class Generate(commands.Cog):
 
             msg = await msg.edit(embed=embed)
 
-            await self.prepareGroup(ctx.message.channel, result[6], keystone)
+            await self.prepareGroup(ctx.message.channel, result[2], result[6], keystone)
 
         else:
             # Needs more/less fields
             await ctx.message.channel.send(':x: The command you have entered is invalid. Please check the correct formatting in the pins. :x:', delete_after=10.0)
 
-    async def prepareGroup(self, channel, armor, keystone):
+    async def prepareGroup(self, channel, faction, armor, keystone):
         # channels / emoji aren't loaded before being ready
         await self.client.wait_until_ready()
 
@@ -171,17 +174,13 @@ class Generate(commands.Cog):
                 tanksEmoji = self.getEmoji(message, self.tankEmoji)
                 healersEmoji = self.getEmoji(message, self.healerEmoji)
                 dpsEmoji = self.getEmoji(message, self.dpsEmoji)
-                tankKeystoneEmoji = self.getEmoji(message, self.tankKeystoneEmoji)
-                healerKeystoneEmoji = self.getEmoji(message, self.healerKeystoneEmoji)
-                dpsKeystoneEmoji = self.getEmoji(message, self.dpsKeystoneEmoji)
+                keystoneEmoji = self.getEmoji(message, self.keystoneEmoji)
 
-                tanks = await self.getReactedUsers(tanksEmoji, armor, keystone, "Tank")
-                healers = await self.getReactedUsers(healersEmoji, armor, keystone, "Healer")
-                dps = await self.getReactedUsers(dpsEmoji, armor, keystone, "Damage")
+                tanks = await self.getReactedUsers(tanksEmoji, faction, armor, keystone, "Tank")
+                healers = await self.getReactedUsers(healersEmoji, faction, armor, keystone, "Healer")
+                dps = await self.getReactedUsers(dpsEmoji, faction, armor, keystone, "Damage")
 
-                tankKeystone = await self.getReactedUsers(tankKeystoneEmoji, armor, keystone, "Tank")
-                healerKeystone = await self.getReactedUsers(healerKeystoneEmoji, armor, keystone, "Healer")
-                dpsKeystone = await self.getReactedUsers(dpsKeystoneEmoji, armor, keystone, "Damage")
+                keystones = await self.getReactedUsers(keystoneEmoji, faction, armor, keystone)
 
                 tankHasKey = False
                 healerHasKey = False
@@ -190,7 +189,7 @@ class Generate(commands.Cog):
 
                 try:
                     for user in tanks:
-                        if user in tankKeystone and not tankHasKey:
+                        if user in keystones and not tankHasKey:
                             tanks.remove(user)
                             tanks.insert(0, user)
                             tankHasKey = True
@@ -208,7 +207,7 @@ class Generate(commands.Cog):
 
                 try:
                     for user in healers:
-                        if user in healerKeystone and not healerHasKey:
+                        if user in keystones and not healerHasKey:
                             healers.remove(user)
                             healers.insert(0, user)
                             healerHasKey = True
@@ -225,7 +224,7 @@ class Generate(commands.Cog):
                     return
 
                 for user in dps:
-                    if user in dpsKeystone:
+                    if user in keystones:
                         if not dpsOneHasKey:
                             dps.remove(user)
                             dps.insert(0, user)
@@ -281,8 +280,16 @@ class Generate(commands.Cog):
                   f"Group id: {msg.id}")
         await msg.channel.send(message)
 
-    def checkRoles(self, user, armor, keystone, role = "Any"):
+    def checkRoles(self, user, faction, armor, keystone, role = "Any"):
         isValid = False
+
+        if int(keystone) >= 15:
+            if faction == "Horde":
+                factionRole = self.getRole("Highkey Booster Horde")
+            elif faction == "Alliance":
+                factionRole = self.getRole("Highkey Booster Alliance")
+        else:
+            factionRole = self.getRole("Mplus Booster")
 
         if int(keystone) >= 18:
             keystoneRole = self.getRole("Legendary")
@@ -292,6 +299,11 @@ class Generate(commands.Cog):
             keystoneRole = self.getRole("Rare")
 
         userRoles = user.roles
+
+        if factionRole in userRoles:
+            isValid = True
+        else:
+            return False
 
         if keystoneRole in userRoles:
             isValid = True
@@ -321,8 +333,8 @@ class Generate(commands.Cog):
     def getEmoji(self, message, targetEmoji):
         return next(x for x in message.reactions if getattr(x.emoji, 'id', None) == targetEmoji.id)
 
-    async def getReactedUsers(self, targetEmoji, armor, keystone, role = "Any"):
-        return await targetEmoji.users().filter(lambda user: not user.bot and self.checkRoles(user, armor, keystone, role)).flatten()
+    async def getReactedUsers(self, targetEmoji, faction, armor, keystone, role = "Any"):
+        return await targetEmoji.users().filter(lambda user: not user.bot and self.checkRoles(user, faction, armor, keystone, role)).flatten()
 
 def setup(client):
     client.add_cog(Generate(client))
