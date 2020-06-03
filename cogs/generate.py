@@ -4,7 +4,6 @@ import re
 import asyncio
 import datetime
 import time
-import itertools
 
 from discord.utils import get
 from discord.ext import commands
@@ -19,7 +18,7 @@ class Generate(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.config = config.Config('mythicplus.json')
-        self.duration = datetime.timedelta(seconds=15)
+        self.duration = datetime.timedelta(seconds=20)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -27,11 +26,13 @@ class Generate(commands.Cog):
         self.tankEmoji = self.client.get_emoji(714930608266018859)
         self.healerEmoji = self.client.get_emoji(714930600267612181)
         self.dpsEmoji = self.client.get_emoji(714930578461425724)
+        self.keystoneEmoji = self.client.get_emoji(715918950092898346)
         self.tankKeystoneEmoji = self.client.get_emoji(717694999835181069)
         self.healerKeystoneEmoji = self.client.get_emoji(717695016323121173)
         self.dpsKeystoneEmoji = self.client.get_emoji(717695025949180053)
         self.teamEmoji = "\U0001F1F9"
         self.cancelEmoji = "\U0000274C"
+        self.doneEmoji = "\U00002705"
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
@@ -59,6 +60,7 @@ class Generate(commands.Cog):
 
         if str(reaction.emoji) == str(self.cancelEmoji):
             author = reaction.message.embeds[0].fields[6].value
+            author = author.split(" ", 1)[0]
 
             if user.mention == author:
                 await reaction.message.delete()
@@ -71,40 +73,47 @@ class Generate(commands.Cog):
         countdown = time.strftime('%H:%M:%S', time.gmtime(countdown))
         result = [x.strip() for x in re.split(' ', msg)]
 
-        count = 6
+        count = 7
         advertiserNote = ""
-        for x in range(6, len(result)):
+        for x in range(7, len(result)):
             advertiserNote += result[count] + " "
             count += 1
 
         # TODO: change numbers
-        if len(result) >= 6:
-            keystone = result[2]
+        if len(result) >= 7:
+            keystone = result[3]
+            mentions = ""
+            tankRole = self.getRole("Tank").mention
+            healerRole = self.getRole("Healer").mention
+            damageRole = self.getRole("Damage").mention
+            mentions += tankRole + " " + healerRole + " " + damageRole + " "
 
-            if(result[5] != "Any"):
-                armor = self.getRole(result[5]).mention
+            if(result[6] != "Any"):
+                armor = self.getRole(result[6]).mention
+                mentions += armor
             else:
                 armor = "Any"
-                self.getRole("Cloth").mention
-                self.getRole("Leather").mention
-                self.getRole("Mail").mention
-                self.getRole("Plate").mention
+                cloth = self.getRole("Cloth").mention
+                leather = self.getRole("Leather").mention
+                mail = self.getRole("Mail").mention
+                plate = self.getRole("Plate").mention
+                mentions += cloth + " " + leather + " " + mail + " " + plate
 
-            embed = discord.Embed(title=f"Generating Mythic +{result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n" +
+            embed = discord.Embed(title=f"Generating Mythic +{result[3]} run!", description="Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n" +
                                 f"The group will be created within {countdown}.", color=0x5cf033)
             embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
-            embed.add_field(name="Faction", value=result[1], inline=True)
-            embed.add_field(name="Payment Realm", value=result[0], inline=True)
-            embed.add_field(name="Gold Pot", value=result[3], inline=True)
-            embed.add_field(name="Keystone Level", value=result[2], inline=True)
-            embed.add_field(name="Dungeon", value=result[4], inline=True)
+            embed.add_field(name="Faction", value=result[2], inline=True)
+            embed.add_field(name="Payment Realm", value=result[1], inline=True)
+            embed.add_field(name="Gold Pot", value=result[4], inline=True)
+            embed.add_field(name="Keystone Level", value=result[3], inline=True)
+            embed.add_field(name="Dungeon", value=result[5], inline=True)
             embed.add_field(name="Armor Type", value=armor, inline=True)
-            embed.add_field(name="Advertiser", value=ctx.message.author.mention)
+            embed.add_field(name="Advertiser", value=f"{ctx.message.author.mention} ({result[0]})")
 
             if advertiserNote:
                 embed.add_field(name="Advertiser Note", value=advertiserNote, inline=False)
 
-            msg = await ctx.message.channel.send(embed=embed)
+            msg = await ctx.message.channel.send(content=mentions, embed=embed)
 
             # Tank
             await msg.add_reaction(self.tankEmoji)
@@ -121,13 +130,13 @@ class Generate(commands.Cog):
             await msg.add_reaction(self.dpsKeystoneEmoji)
 
             # Team
-            await msg.add_reaction("\U0001F1F9")
+            await msg.add_reaction(self.teamEmoji)
 
             # Cancel
-            await msg.add_reaction("\U0000274C")
+            await msg.add_reaction(self.cancelEmoji)
 
             # Done - TODO: Add logic
-            await msg.add_reaction("\U00002705")
+            await msg.add_reaction(self.doneEmoji)
 
             await self.config.put(duration.timestamp(), msg.id)
 
@@ -135,7 +144,7 @@ class Generate(commands.Cog):
 
             msg = await msg.edit(embed=embed)
 
-            await self.prepareGroup(ctx.message.channel, result[5], keystone)
+            await self.prepareGroup(ctx.message.channel, result[6], keystone)
 
         else:
             # Needs more/less fields
@@ -256,17 +265,21 @@ class Generate(commands.Cog):
         healer = group[1]
         dps = group[2]
 
-        # Mention the group members - TODO: add dps
-        tank.mention
-        healer.mention
-
         embed = msg.embeds[0]
-        embed.title = f"Generated Mythic +{keystone} Group"
-        embed.description = f"{self.tankEmoji} {tank.mention}\n{self.healerEmoji} {healer.mention}\n{self.dpsEmoji} {tank.mention}\n{self.dpsEmoji} {healer.mention}"
-        embed.add_field(name="Keystone Holder", value=keystoneHolder.mention, inline=True)
-        embed.set_footer(text=f"{embed.footer.text} Group created at: {datetime.datetime.now().strftime('%H:%M:%S')}")
 
-        await msg.edit(embed=embed)
+        advertiser = re.findall('\(([^)]+)', embed.fields[6].value)[0]
+
+        embed.title = f"Generated Mythic +{keystone} Group"
+        embed.description = (f"{self.tankEmoji} {tank.mention}\n{self.healerEmoji} {healer.mention}\n{self.dpsEmoji} {tank.mention}\n{self.dpsEmoji} {healer.mention}\n{self.keystoneEmoji} {keystoneHolder.mention}\n\n" +
+                             f"Please whisper `/w {advertiser} invite`")
+        embed.set_footer(text=f"{embed.footer.text} Group created at: {datetime.datetime.now().strftime('%H:%M:%S')}")
+        editedmsg = await msg.edit(embed=embed)
+
+        # Mention the group members - TODO: add dps
+        message = (f"{self.tankEmoji} {tank.mention} {self.healerEmoji} {healer.mention} {self.dpsEmoji} {tank.mention} {self.dpsEmoji} {healer.mention}\n" +
+                  f"Please whisper `/w {advertiser} invite`. See the message above for more details.\n" +
+                  f"Group id: {msg.id}")
+        await msg.channel.send(message)
 
     def checkRoles(self, user, armor, keystone, role = "Any"):
         isValid = False
