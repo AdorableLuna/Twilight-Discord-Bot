@@ -44,6 +44,8 @@ class Generate(commands.Cog):
 
             # If the group was already edited (team), then return
             if "created" in embed.footer.text: return
+            teamLeaderRole = self.getRole("M+ TEAM LEADER")
+            if teamLeaderRole not in user.roles: return
 
             if armor != "Any":
                 armor = re.sub('[<@&>]', '', armor)
@@ -83,26 +85,26 @@ class Generate(commands.Cog):
             keystone = result[3]
             mentions = ""
 
-            if int(keystone) >= 15:
-                if result[2] == "Horde":
-                    keystoneRole = self.getRole("Highkey Booster Horde").mention
-                elif result[2] == "Alliance":
-                    keystoneRole = self.getRole("Highkey Booster Alliance").mention
-                mentions += keystoneRole + " "
-            elif int(keystone) >= 10 and int(keystone) <= 14:
-                keystoneRole = self.getRole("Mplus Booster").mention
-                mentions += keystoneRole + " "
-
-            tankRole = self.getRole("Tank").mention
-            healerRole = self.getRole("Healer").mention
-            damageRole = self.getRole("Damage").mention
-            mentions += tankRole + " " + healerRole + " " + damageRole + " "
-
             if(result[6] != "Any"):
                 armor = self.getRole(result[6]).mention
                 mentions += armor
             else:
                 armor = "Any"
+
+                if int(keystone) >= 15:
+                    if result[2] == "Horde":
+                        keystoneRole = self.getRole("Highkey Booster Horde").mention
+                    elif result[2] == "Alliance":
+                        keystoneRole = self.getRole("Highkey Booster Alliance").mention
+                    mentions += keystoneRole + " "
+                elif int(keystone) >= 10 and int(keystone) <= 14:
+                    keystoneRole = self.getRole("Mplus Booster").mention
+                    mentions += keystoneRole + " "
+
+                tankRole = self.getRole("Tank").mention
+                healerRole = self.getRole("Healer").mention
+                damageRole = self.getRole("Damage").mention
+                mentions += tankRole + " " + healerRole + " " + damageRole
 
             embed = discord.Embed(title=f"Generating Mythic +{result[3]} run!", description="Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n" +
                                 f"The group will be created within {countdown}.", color=0x5cf033)
@@ -269,7 +271,7 @@ class Generate(commands.Cog):
         advertiser = re.findall('\(([^)]+)', embed.fields[6].value)[0]
 
         embed.title = f"Generated Mythic +{keystone} Group"
-        embed.description = (f"{self.tankEmoji} {tank.mention}\n{self.healerEmoji} {healer.mention}\n{self.dpsEmoji} {tank.mention}\n{self.dpsEmoji} {healer.mention}\n{self.keystoneEmoji} {keystoneHolder.mention}\n\n" +
+        embed.description = (f"{self.tankEmoji} {tank.mention}\n{self.healerEmoji} {healer.mention}\n{self.dpsEmoji} {tank.mention}\n{self.dpsEmoji} {healer.mention}\n\n{self.keystoneEmoji} {keystoneHolder.mention}\n" +
                              f"Please whisper `/w {advertiser} invite`")
         embed.set_footer(text=f"{embed.footer.text} Group created at: {datetime.datetime.now().strftime('%H:%M:%S')}")
         editedmsg = await msg.edit(embed=embed)
