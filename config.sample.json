@@ -2,13 +2,11 @@
     "TOKEN": "",
     "SPREADSHEET_ID": "",
     "GUILD_ID": 123456789,
-    "DATABASE": [
-      {
+    "DATABASE": {
         "HOST": "",
         "USER": "",
         "PASSWORD": "",
         "DATABASE": "",
         "AUTH_PLUGIN": "mysql_native_password"
-      }
-    ]
+    }
 }

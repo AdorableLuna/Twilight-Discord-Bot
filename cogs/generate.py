@@ -7,9 +7,13 @@ import time
 import itertools
 import mysql.connector
 import logging
+import math
+import locale
 
 from discord.utils import get
 from discord.ext import commands
+
+locale.setlocale(locale.LC_ALL, '')
 
 with open('./config.json', 'r') as cjson:
     config = json.load(cjson)
@@ -107,6 +111,11 @@ class Generate(commands.Cog):
             await self.updateGroup(reaction.message)
 
         if str(reaction.emoji) == str(self.teamEmoji):
+            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "All", "team": True}
+            if not await self.checkRoles(channel, data):
+                await reaction.remove(user)
+                return
+
             existsInBoosterQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
             existsInKeystoneQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
             existsInBooster = self.select(existsInBoosterQuery)
@@ -193,31 +202,38 @@ class Generate(commands.Cog):
     async def generate(self, ctx):
         msg = ctx.message.content[10:]
         result = [x.strip() for x in re.split(' ', msg)]
+        channel = ctx.message.channel.name
 
-        count = 7
+        if "horde" in channel:
+            faction = "Horde"
+        elif "alliance" in channel:
+            faction = "Alliance"
+
+        count = 6
         advertiserNote = ""
-        for x in range(7, len(result)):
+        for x in range(6, len(result)):
             advertiserNote += result[count] + " "
             count += 1
 
-        # TODO: change numbers
-        if len(result) >= 7:
-            keystone = result[3]
+        if len(result) >= 6:
+            keystone = result[2]
+            keystoneLevel = int(keystone.partition("+")[2])
             mentions = ""
+            result[5] = result[5].capitalize()
 
-            if(result[6] != "Any"):
-                armor = self.getRole(result[6]).mention
+            if(result[5] != "Any"):
+                armor = self.getRole(result[5]).mention
                 mentions += armor
             else:
                 armor = "Any"
 
-                if int(keystone) >= 15:
-                    if result[2] == "Horde":
+                if keystoneLevel >= 15:
+                    if faction == "Horde":
                         keystoneRole = self.getRole("Highkey Booster Horde").mention
-                    elif result[2] == "Alliance":
+                    elif faction == "Alliance":
                         keystoneRole = self.getRole("Highkey Booster Alliance").mention
                     mentions += keystoneRole + " "
-                elif int(keystone) >= 10 and int(keystone) <= 14:
+                elif keystoneLevel >= 10 and keystoneLevel <= 14:
                     keystoneRole = self.getRole("Mplus Booster").mention
                     mentions += keystoneRole + " "
 
@@ -227,14 +243,20 @@ class Generate(commands.Cog):
                 mentions += tankRole + " " + healerRole + " " + damageRole
 
             advertiser = f"{ctx.message.author.mention} ({result[0]})"
+            if "k" in result[3]:
+                goldPot = result[3].replace('k', '')
+                goldPot = str(goldPot) + "000"
+            else:
+                goldPot = result[3]
+            boosterCut = math.ceil((int(goldPot) / 100) * 17.8)
 
-            embed = discord.Embed(title=f"Generating Mythic +{result[3]} run!", description="Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n", color=0x5cf033)
+            embed = discord.Embed(title=f"Generating {result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n", color=0x5cf033)
             embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
-            embed.add_field(name="Faction", value=result[2], inline=True)
+            embed.add_field(name="Gold Pot", value=result[3], inline=True)
+            embed.add_field(name="Booster Cut", value=f"{boosterCut:n} (17.8%)", inline=True)
             embed.add_field(name="Payment Realm", value=result[1], inline=True)
-            embed.add_field(name="Gold Pot", value=result[4], inline=True)
-            embed.add_field(name="Keystone Level", value=result[3], inline=True)
-            embed.add_field(name="Dungeon", value=result[5], inline=True)
+            embed.add_field(name="Keystone Level", value=result[2], inline=True)
+            embed.add_field(name="Dungeon", value=result[4], inline=True)
             embed.add_field(name="Armor Type", value=armor, inline=True)
             embed.add_field(name="Advertiser", value=advertiser)
 
@@ -245,9 +267,9 @@ class Generate(commands.Cog):
             embed.set_footer(text=f"Group id: {msg.id}.")
             await msg.edit(embed=embed)
 
-            query = """INSERT INTO mythicplus.group (id, title, description, faction, payment_realm, gold_pot, keystone_level, dungeon, armor_type, advertiser, advertiser_note, footer)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-            values = (msg.id, embed.title, embed.description, result[2], result[1], result[4], result[3], result[5], armor, advertiser, advertiserNote, embed.footer.text)
+            query = """INSERT INTO mythicplus.group (id, title, description, faction, payment_realm, gold_pot, booster_cut, keystone_level, dungeon, armor_type, advertiser, advertiser_note, footer)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+            values = (msg.id, embed.title, embed.description, faction, result[1], result[3], boosterCut, result[2], result[4], armor, advertiser, advertiserNote, embed.footer.text)
             self.insert(query, values)
 
             # Tank
@@ -312,7 +334,7 @@ class Generate(commands.Cog):
             return
 
         embed = message.embeds[0]
-        embed.description = f"""Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n\n
+        embed.description = f"""Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n
                             {self.tankEmoji} {tank}\n{self.healerEmoji} {healer}\n{self.dpsEmoji} {dpsOne}\n{self.dpsEmoji} {dpsTwo}\n\n{self.keystoneEmoji} {keystoneHolder}"""
         await message.edit(embed=embed)
 
@@ -335,7 +357,7 @@ class Generate(commands.Cog):
 
         advertiser = re.findall('\(([^)]+)', embed.fields[6].value)[0]
 
-        embed.title = f"Generated Mythic +{group['keystone_level']} Group"
+        embed.title = f"Generated {group['keystone_level']} Group"
         embed.description = (f"{self.tankEmoji} {tank}\n{self.healerEmoji} {healer}\n{self.dpsEmoji} {dpsOne}\n{self.dpsEmoji} {dpsTwo}\n\n{self.keystoneEmoji} {keystoneHolder}\n" +
                              f"Please whisper `/w {advertiser} invite`")
         embed.set_footer(text=f"{embed.footer.text} Group created at: {datetime.datetime.now().strftime('%H:%M:%S')}")
@@ -398,8 +420,9 @@ class Generate(commands.Cog):
 
     async def checkRoles(self, channel, data):
         isValid = False
+        keystoneLevel = int(data["keystone_level"].partition("+")[2])
 
-        if data["keystone_level"] >= 15:
+        if keystoneLevel >= 15:
             if data["faction"] == "Horde":
                 factionRole = self.getRole("Highkey Booster Horde")
             elif data["faction"] == "Alliance":
@@ -407,11 +430,11 @@ class Generate(commands.Cog):
         else:
             factionRole = self.getRole("Mplus Booster")
 
-        if data["keystone_level"] >= 18:
+        if keystoneLevel >= 18:
             keystoneRole = self.getRole("Legendary")
-        if data["keystone_level"] <= 17:
+        if keystoneLevel <= 17:
             keystoneRole = self.getRole("Epic")
-        if data["keystone_level"] <= 14:
+        if keystoneLevel <= 14:
             keystoneRole = self.getRole("Rare")
 
         userRoles = data["user"].roles
@@ -428,7 +451,7 @@ class Generate(commands.Cog):
             await channel.send(f"{data['user'].mention}, you do NOT have the required `{keystoneRole}` role to join this group")
             return False
 
-        if data["role"] != "Any":
+        if data["role"] != "Any" and data["role"] != "All":
             role = self.getRole(data["role"])
             if role in userRoles:
                 isValid = True
@@ -438,11 +461,18 @@ class Generate(commands.Cog):
 
         if data["armor_type"] != "Any":
             armorRole = self.getRoleById(data["armor_type"])
-
             if armorRole in userRoles:
                 isValid = True
             else:
                 await channel.send(f"{data['user'].mention}, you do NOT have the required `{armorRole}` role to join this group")
+                return False
+
+        if "team" in data:
+            teamRole = self.getRole("M+ TEAM LEADER")
+            if teamRole in userRoles:
+                isValid = True
+            else:
+                await channel.send(f"{data['user'].mention}, you do NOT have the required `{teamRole}` role to join this group")
                 return False
 
         return isValid
