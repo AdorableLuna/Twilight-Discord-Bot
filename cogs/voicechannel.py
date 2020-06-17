@@ -21,11 +21,14 @@ class Voicechannel(commands.Cog):
     async def voicechannel(self, ctx):
         channels = (c for c in self.guild.channels if c.type==ChannelType.voice)
         for channel in channels:
-            if len(channel.members) == 0:
-                link = await channel.create_invite(max_age = 300)
-                msg = f"One empty voice channel as requested: **{channel.name}**\n{link}"
-                await ctx.message.channel.send(msg)
-                return
+            if "Boost" in channel.name:
+                if len(channel.members) == 0:
+                    link = await channel.create_invite(max_age = 300)
+                    msg = f"One empty voice channel as requested: **{channel.name}**\n{link}"
+                    await ctx.message.channel.send(msg)
+                    return
+
+        await ctx.message.channel.send("All voice channels are occupied at the moment.")
 
 def setup(client):
     client.add_cog(Voicechannel(client))
