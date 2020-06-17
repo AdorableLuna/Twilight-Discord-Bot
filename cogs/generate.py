@@ -199,6 +199,7 @@ class Generate(commands.Cog):
             await self.updateGroup(reaction.message)
 
     @commands.command()
+    @commands.has_any_role("Advertiser", "Management", "Council")
     async def generate(self, ctx):
         msg = ctx.message.content[10:]
         result = [x.strip() for x in re.split(' ', msg)]
@@ -222,6 +223,10 @@ class Generate(commands.Cog):
             result[5] = result[5].capitalize()
 
             if(result[5] != "Any"):
+                if result[5] == "Cloth" or result[5] == "Mail":
+                    tankRole = self.getRole("Tank").mention
+                    mentions += tankRole + " "
+
                 armor = self.getRole(result[5]).mention
                 mentions += armor
             else:
@@ -253,7 +258,7 @@ class Generate(commands.Cog):
             embed = discord.Embed(title=f"Generating {result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n", color=0x5cf033)
             embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
             embed.add_field(name="Gold Pot", value=result[3], inline=True)
-            embed.add_field(name="Booster Cut", value=f"{boosterCut:n} (17.8%)", inline=True)
+            embed.add_field(name="Booster Cut", value=f"{boosterCut:n}", inline=True)
             embed.add_field(name="Payment Realm", value=result[1], inline=True)
             embed.add_field(name="Keystone Level", value=result[2], inline=True)
             embed.add_field(name="Dungeon", value=result[4], inline=True)
@@ -292,6 +297,8 @@ class Generate(commands.Cog):
 
             # Done - TODO: Add logic
             # await msg.add_reaction(self.doneEmoji)
+
+            await ctx.message.delete()
 
         else:
             # Needs more/less fields
@@ -461,11 +468,21 @@ class Generate(commands.Cog):
 
         if data["armor_type"] != "Any":
             armorRole = self.getRoleById(data["armor_type"])
-            if armorRole in userRoles:
-                isValid = True
+            if str(armorRole) == "Cloth" or str(armorRole) == "Mail":
+                if data["role"] == "Tank":
+                    isValid = True
+                else:
+                    if armorRole in userRoles:
+                        isValid = True
+                    else:
+                        await channel.send(f"{data['user'].mention}, you do NOT have the required `{armorRole}` role to join this group")
+                        return False
             else:
-                await channel.send(f"{data['user'].mention}, you do NOT have the required `{armorRole}` role to join this group")
-                return False
+                if armorRole in userRoles:
+                    isValid = True
+                else:
+                    await channel.send(f"{data['user'].mention}, you do NOT have the required `{armorRole}` role to join this group")
+                    return False
 
         if "team" in data:
             teamRole = self.getRole("M+ TEAM LEADER")
