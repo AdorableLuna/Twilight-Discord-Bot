@@ -2,12 +2,18 @@ import discord
 import json
 import re
 import asyncio
-
-from collections import deque
+import datetime
+import time
 import itertools
+import mysql.connector
+import logging
+import math
+import locale
 
 from discord.utils import get
 from discord.ext import commands
+
+locale.setlocale(locale.LC_ALL, '')
 
 with open('./config.json', 'r') as cjson:
     config = json.load(cjson)
@@ -16,96 +22,194 @@ class Generate(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-        self.tanks = deque()
-        self.healers = deque()
-        self.dps = deque()
-
-        self.tankHasKey = False
-        self.healerHasKey = False
-        self.dpsOneHasKey = False
-        self.dpsTwoHasKey = False
+        self.db = mysql.connector.connect(
+            host = config["DATABASE"]["HOST"],
+            user = config["DATABASE"]["USER"],
+            passwd = config["DATABASE"]["PASSWORD"],
+            database = config["DATABASE"]["SCHEMA"],
+            auth_plugin = config["DATABASE"]["AUTH_PLUGIN"]
+        )
 
     @commands.Cog.listener()
     async def on_ready(self):
+        self.guild = self.client.get_guild(config["GUILD_ID"])
         self.tankEmoji = self.client.get_emoji(714930608266018859)
         self.healerEmoji = self.client.get_emoji(714930600267612181)
         self.dpsEmoji = self.client.get_emoji(714930578461425724)
         self.keystoneEmoji = self.client.get_emoji(715918950092898346)
+        self.teamEmoji = "\U0001F1F9"
+        self.cancelEmoji = "\U0000274C"
+        self.doneEmoji = "\U00002705"
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
-        if not checkRoles(self, user, reaction.emoji):
-            return
+        if self.client.user == user: return
+        id = reaction.message.id
+        channel = reaction.message.channel
 
-        if self.client.user == user:
-            return
+        query = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
+        group = self.select(query)
+
+        if group["created"]: return
 
         if str(reaction.emoji) == str(self.tankEmoji):
-            self.tanks.append(user)
+            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Tank"}
+            if not await self.checkRoles(channel, data):
+                await reaction.remove(user)
+                return
+
+            role = "Tank"
 
         if str(reaction.emoji) == str(self.healerEmoji):
-            self.healers.append(user)
+            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Healer"}
+            if not await self.checkRoles(channel, data):
+                await reaction.remove(user)
+                return
+
+            role = "Healer"
 
         if str(reaction.emoji) == str(self.dpsEmoji):
-            self.dps.append(user)
+            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Damage"}
+            if not await self.checkRoles(channel, data):
+                await reaction.remove(user)
+                return
+
+            role = "Damage"
+
+        if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji):
+            query = f"""INSERT INTO mythicplus.booster (groupid, `user`, `role`)
+                       SELECT '{id}', '{user.mention}', '{role}' FROM DUAL
+                       WHERE NOT EXISTS (SELECT groupid, `user` FROM mythicplus.booster
+                                WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
+            existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
+            self.insert(query)
+            existsInKeystone = self.select(existsQuery)
+
+            if not existsInKeystone["result"]:
+                query = f"""INSERT INTO mythicplus.keystone (groupid, `user`)
+                           SELECT '{id}', '{user.mention}' FROM DUAL
+                           WHERE NOT EXISTS (SELECT groupid, `user` FROM mythicplus.keystone
+                                    WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
+                self.insert(query)
 
         if str(reaction.emoji) == str(self.keystoneEmoji):
-            if not self.tankHasKey and user in self.tanks:
-                self.tanks.appendleft(user)
-                self.tankHasKey = True
+            existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
+            existsInKeystone = self.select(existsQuery)
 
-            if not self.healerHasKey and user in self.healers:
-                self.healers.appendleft(user)
-                self.healerHasKey = True
+            if existsInKeystone["result"]:
+                query = f"""UPDATE mythicplus.keystone
+                        SET has_keystone = 1
+                        WHERE groupid = %s AND user = %s"""
+                value = (id, user.mention)
+                self.insert(query, value)
+            else:
+                await reaction.remove(user)
+                await channel.send(f"{user.mention}, assign yourself a role before marking yourself as a keystone holder.")
+                return
 
-            if user in self.dps:
-                if not self.dpsOneHasKey:
-                    self.dps.appendleft(user)
-                    self.dpsOneHasKey = True
-                if not self.dpsTwoHasKey:
-                    self.dps.appendleft(user)
-                    self.dpsTwoHasKey = True
+        if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji) or str(reaction.emoji) == str(self.keystoneEmoji):
+            await self.updateGroup(reaction.message)
 
-        if str(reaction.emoji) == str("\U0001F1F9"):
-            self.waitTimer.cancel()
-            self.team = user
+        if str(reaction.emoji) == str(self.teamEmoji):
+            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "All", "team": True}
+            if not await self.checkRoles(channel, data):
+                await reaction.remove(user)
+                return
 
-        if str(reaction.emoji) == str("\U0000274C"):
-            if user == self.author:
-                self.cancelled = True
-                self.waitTimer.cancel()
-                await self.msg.delete()
+            existsInBoosterQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
+            existsInKeystoneQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
+            existsInBooster = self.select(existsInBoosterQuery)
+            existsInKeystone = self.select(existsInKeystoneQuery)
+
+            if not existsInBooster["result"]:
+                query = f"""INSERT INTO mythicplus.booster (groupid, `user`, `role`, is_teamleader)
+                           VALUES ('{id}', '{user.mention}', 'All', '1')"""
+                self.insert(query)
+            else:
+                query = f"""UPDATE mythicplus.booster
+                        SET `role` = 'All', is_teamleader = 1
+                        WHERE groupid = %s AND user = %s"""
+                value = (id, user.mention)
+                self.insert(query, value)
+
+            if not existsInKeystone["result"]:
+                query = f"""INSERT INTO mythicplus.keystone (groupid, `user`, has_keystone)
+                           SELECT '{id}', '{user.mention}', 1 FROM DUAL
+                           WHERE NOT EXISTS (SELECT groupid, `user` FROM mythicplus.keystone
+                                    WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
+                self.insert(query)
+            else:
+                query = f"""UPDATE mythicplus.keystone
+                        SET has_keystone = 1
+                        WHERE groupid = %s AND user = %s"""
+                value = (id, user.mention)
+                self.insert(query, value)
+
+            group = [user.mention, user.mention, user.mention, user.mention, user.mention]
+            await self.createGroup(reaction.message, group)
+            return
+
+        if str(reaction.emoji) == str(self.cancelEmoji):
+            author = group["advertiser"]
+            author = author.split(" ", 1)[0]
+
+            if user.mention == author:
+                await reaction.message.delete() #TODO: remove from database?
+                await self.cancelGroup(reaction.message)
 
     @commands.Cog.listener()
     async def on_reaction_remove(self, reaction, user):
-        if self.client.user == user:
-            return
+        if self.client.user == user: return
+        id = reaction.message.id
+        channel = reaction.message.channel
+
+        query = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
+        group = self.select(query)
+
+        if group["created"]: return
 
         if str(reaction.emoji) == str(self.tankEmoji):
-            self.tanks.remove(user)
+            role = "Tank"
 
         if str(reaction.emoji) == str(self.healerEmoji):
-            self.healers.remove(user)
+            role = "Healer"
 
         if str(reaction.emoji) == str(self.dpsEmoji):
-            self.dps.remove(user)
+            role = "Damage"
+
+        if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji):
+            existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}' AND role = '{role}') as 'result'"
+            existsInBooster = self.select(existsQuery)
+
+            if existsInBooster["result"]:
+                query = f"""DELETE FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}' AND role = '{role}'"""
+                self.delete(query)
+
+        if str(reaction.emoji) == str(self.keystoneEmoji):
+            existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
+            existsInKeystone = self.select(existsQuery)
+
+            if existsInKeystone["result"]:
+                query = f"""UPDATE mythicplus.keystone
+                        SET has_keystone = 0
+                        WHERE groupid = %s AND user = %s"""
+                value = (id, user.mention)
+                self.insert(query, value)
+
+        if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji) or str(reaction.emoji) == str(self.keystoneEmoji):
+            await self.updateGroup(reaction.message)
 
     @commands.command()
+    @commands.has_any_role("Advertiser", "Management", "Council")
     async def generate(self, ctx):
-        # Clear the lists - TODO: Move to own function
-        self.tanks.clear()
-        self.healers.clear()
-        self.dps.clear()
-        self.team = ""
-        self.author = ctx.message.author
-        self.cancelled = False
-        self.tankHasKey = False
-        self.healerHasKey = False
-        self.dpsOneHasKey = False
-        self.dpsTwoHasKey = False
-
         msg = ctx.message.content[10:]
         result = [x.strip() for x in re.split(' ', msg)]
+        channel = ctx.message.channel.name
+
+        if "horde" in channel:
+            faction = "Horde"
+        elif "alliance" in channel:
+            faction = "Alliance"
 
         count = 6
         advertiserNote = ""
@@ -113,154 +217,323 @@ class Generate(commands.Cog):
             advertiserNote += result[count] + " "
             count += 1
 
-        # TODO: change numbers
         if len(result) >= 6:
-            self.keystone = result[2]
-            self.armor = result[5]
+            keystone = result[2]
+            keystoneLevel = int(keystone.partition("+")[2])
+            mentions = ""
+            result[5] = result[5].capitalize()
 
-            embed = discord.Embed(title=f"Generating Mythic +{result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n" +
-                                "The group will be determined in x minutes.", color=0x5cf033)
+            if(result[5] != "Any"):
+                if result[5] == "Cloth" or result[5] == "Mail":
+                    tankRole = self.getRole("Tank").mention
+                    mentions += tankRole + " "
+
+                armor = self.getRole(result[5]).mention
+                mentions += armor
+            else:
+                armor = "Any"
+
+                if keystoneLevel >= 15:
+                    if faction == "Horde":
+                        keystoneRole = self.getRole("Highkey Booster Horde").mention
+                    elif faction == "Alliance":
+                        keystoneRole = self.getRole("Highkey Booster Alliance").mention
+                    mentions += keystoneRole + " "
+                elif keystoneLevel >= 10 and keystoneLevel <= 14:
+                    keystoneRole = self.getRole("Mplus Booster").mention
+                    mentions += keystoneRole + " "
+
+                tankRole = self.getRole("Tank").mention
+                healerRole = self.getRole("Healer").mention
+                damageRole = self.getRole("Damage").mention
+                mentions += tankRole + " " + healerRole + " " + damageRole
+
+            advertiser = f"{ctx.message.author.mention} ({result[0]})"
+            if "k" in result[3]:
+                goldPot = result[3].replace('k', '')
+                goldPot = str(goldPot) + "000"
+            else:
+                goldPot = result[3]
+            boosterCut = math.ceil((int(goldPot) / 100) * 17.8)
+
+            embed = discord.Embed(title=f"Generating {result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n", color=0x5cf033)
             embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
-            embed.add_field(name="Faction", value=result[1], inline=True)
-            embed.add_field(name="Payment Realm", value=result[0], inline=True)
             embed.add_field(name="Gold Pot", value=result[3], inline=True)
+            embed.add_field(name="Booster Cut", value=f"{boosterCut:n}", inline=True)
+            embed.add_field(name="Payment Realm", value=result[1], inline=True)
             embed.add_field(name="Keystone Level", value=result[2], inline=True)
             embed.add_field(name="Dungeon", value=result[4], inline=True)
-            embed.add_field(name="Armor Type", value=result[5], inline=True)
+            embed.add_field(name="Armor Type", value=armor, inline=True)
+            embed.add_field(name="Advertiser", value=advertiser)
 
             if advertiserNote:
                 embed.add_field(name="Advertiser Note", value=advertiserNote, inline=False)
 
-            self.msg = await ctx.message.channel.send(embed=embed)
+            msg = await ctx.message.channel.send(content=mentions, embed=embed)
+            embed.set_footer(text=f"Group id: {msg.id}.")
+            await msg.edit(embed=embed)
+
+            query = """INSERT INTO mythicplus.group (id, title, description, faction, payment_realm, gold_pot, booster_cut, keystone_level, dungeon, armor_type, advertiser, advertiser_note, footer)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+            values = (msg.id, embed.title, embed.description, faction, result[1], result[3], boosterCut, result[2], result[4], armor, advertiser, advertiserNote, embed.footer.text)
+            self.insert(query, values)
 
             # Tank
-            await self.msg.add_reaction(self.tankEmoji)
+            await msg.add_reaction(self.tankEmoji)
 
             # Healer
-            await self.msg.add_reaction(self.healerEmoji)
+            await msg.add_reaction(self.healerEmoji)
 
             # DPS
-            await self.msg.add_reaction(self.dpsEmoji)
+            await msg.add_reaction(self.dpsEmoji)
 
-            # Keystone
-            await self.msg.add_reaction(self.keystoneEmoji)
+            # Keystones
+            await msg.add_reaction(self.keystoneEmoji)
 
             # Team
-            await self.msg.add_reaction("\U0001F1F9")
+            await msg.add_reaction(self.teamEmoji)
 
             # Cancel
-            await self.msg.add_reaction("\U0000274C")
+            await msg.add_reaction(self.cancelEmoji)
 
             # Done - TODO: Add logic
-            await self.msg.add_reaction("\U00002705")
+            # await msg.add_reaction(self.doneEmoji)
 
-            # TODO: change timer duration
-            self.waitTimer = asyncio.create_task(asyncio.sleep(10))
-            try:
-                await self.waitTimer
-            except asyncio.CancelledError:
-                if self.cancelled:
-                    return
-                else:
-                    pass
-
-            await createGroup(self, ctx, self.msg, embed, result[2])
+            await ctx.message.delete()
 
         else:
             # Needs more/less fields
-            await ctx.message.channel.send(':x: The command you have entered is invalid. Please check the correct formatting in the pins. :x:', delete_after=10.0)
+            await ctx.message.channel.send(':x: The command you have entered is invalid. Please check if the command you entered is valid. :x:', delete_after=10.0)
 
-def checkRoles(self, user, emoji):
-    guild = self.client.get_guild(config["GUILD_ID"])
-    isValid = False
-
-    if (str(emoji) == str("\U0000274C")): return True
-
-    if int(self.keystone) >= 18:
-        keystoneRole = discord.utils.find(lambda r: r.name == 'Legendary', guild.roles)
-    if int(self.keystone) <= 17:
-        keystoneRole = discord.utils.find(lambda r: r.name == 'Epic', guild.roles)
-    if int(self.keystone) <= 14:
-        keystoneRole = discord.utils.find(lambda r: r.name == 'Rare', guild.roles)
-
-    userRoles = user.roles
-
-    if keystoneRole in userRoles:
-        isValid = True
-
-    if self.armor != "Any":
-        armorRole = discord.utils.find(lambda r: r.name == self.armor, guild.roles)
-
-        if armorRole in userRoles:
-            isValid = True
-        else:
-            isValid = False
-
-    if str(emoji) == str("\U0001F1F9"):
-        teamRole = discord.utils.find(lambda r: r.name == 'Mythic+ Team', guild.roles)
-        if teamRole in userRoles:
-            isValid = True
-        else:
-            isValid = False
-
-    return isValid
-
-async def createGroup(self, ctx, msg, embed, keystone):
-    if self.team:
-        tank = healer = self.team
-        dps = [self.team, self.team]
-        keystoneHolder = self.team
-    else:
-        try:
-            tank = self.tanks[0]
-        except:
-            await ctx.message.channel.send(':x: There is not a tank (that meets the criteria) to fill the group. :x:', delete_after=15.0)
-            return
+    async def cancelGroup(self, message):
+        id = message.id
+        mentions = ""
 
         try:
-            healer = self.healers[0]
+            tank = self.selectPriorityBooster("Tank", id, 1)[0]["Tank"]
+            mentions += tank + " "
         except:
-            await ctx.message.channel.send(':x: There is not a healer (that meets the criteria) to fill the group. :x:', delete_after=15.0)
+            pass
+        try:
+            healer = self.selectPriorityBooster("Healer", id, 1)[0]["Healer"]
+            mentions += healer + " "
+        except:
+            pass
+        dps = self.selectPriorityBooster("Damage", id, 2)
+        try:
+            dpsOne = dps[0]["Damage"]
+            mentions += dpsOne + " "
+        except:
+            pass
+        try:
+            dpsTwo = dps[1]["Damage"]
+            mentions += dpsTwo
+        except:
+            pass
+
+        createdMessage = (f"{mentions}\n" +
+                  f"Your group was cancelled by the advertiser.\n")
+        await message.channel.send(createdMessage)
+
+    async def updateGroup(self, message):
+        id = message.id
+
+        try:
+            tank = self.selectPriorityBooster("Tank", id, 1)[0]["Tank"]
+        except:
+            tank = ""
+        try:
+            healer = self.selectPriorityBooster("Healer", id, 1)[0]["Healer"]
+        except:
+            healer = ""
+        dps = self.selectPriorityBooster("Damage", id, 2)
+        try:
+            dpsOne = dps[0]["Damage"]
+        except:
+            dpsOne = ""
+        try:
+            dpsTwo = dps[1]["Damage"]
+        except:
+            dpsTwo = ""
+        try:
+            keystoneQuery = f"""SELECT `user`
+                              FROM mythicplus.keystone K WHERE groupid = '{id}' AND has_keystone = 1 AND
+                              EXISTS
+                                (SELECT 1
+                                  FROM mythicplus.booster B WHERE K.`user` = B.`user`) LIMIT 1"""
+            keystone = self.select(keystoneQuery)
+            keystoneHolder = keystone["user"]
+        except:
+            keystoneHolder = ""
+
+        if tank and healer and dpsOne and dpsTwo and keystoneHolder:
+            group = [tank, healer, dpsOne, dpsTwo, keystoneHolder]
+            await self.createGroup(message, group)
             return
 
-        dps = list(itertools.islice(self.dps, 0, 2))
-        if len(dps) != 2:
-            await ctx.message.channel.send(':x: There are not enough DPS (that meet the criteria) to fill the group. :x:', delete_after=15.0)
-            # return
+        embed = message.embeds[0]
+        embed.description = f"""Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n
+                            {self.tankEmoji} {tank}\n{self.healerEmoji} {healer}\n{self.dpsEmoji} {dpsOne}\n{self.dpsEmoji} {dpsTwo}\n\n{self.keystoneEmoji} {keystoneHolder}"""
+        await message.edit(embed=embed)
 
-    if not self.team and not self.dpsTwoHasKey and not self.dpsOneHasKey and not self.healerHasKey and not self.tankHasKey:
-        await ctx.message.channel.send(':x: There is no one who has the specific key to complete this run. :x:', delete_after=15.0)
-        return
+    async def createGroup(self, message, group):
+        query = f"""UPDATE mythicplus.group
+                SET created = 1
+                WHERE id = {message.id}"""
+        self.insert(query)
 
-    if self.dpsTwoHasKey:
-        keystoneHolder = dps[1]
-    if self.dpsOneHasKey:
-        keystoneHolder = dps[0]
-    if self.healerHasKey:
-        keystoneHolder = healer
-    if self.tankHasKey:
-        keystoneHolder = tank
+        embed = message.embeds[0]
 
-    # Mention the group members - TODO: Change to dps
-    tank.mention
-    healer.mention
-    tank.mention
-    healer.mention
+        tank = group[0]
+        healer = group[1]
+        dpsOne = group[2]
+        dpsTwo = group[3]
+        keystoneHolder = group[4]
 
-                        #change to dps[0]    change to dps[1]
-    # group = discord.Embed(title="Mythic+ group made!", description=
-    #                     f"{self.tankEmoji} {tank.mention}\n" +
-    #                     f"{self.healerEmoji} {healer.mention}\n" +
-    #                     f"{self.dpsEmoji} {tank.mention}\n" +
-    #                     f"{self.dpsEmoji} {healer.mention}\n\n" +
-    #                     "You are in this boosting run.\nSee this bot's post above for the details.", color=0x5cf033)
+        query = f"SELECT keystone_level FROM mythicplus.group WHERE id = '{message.id}'"
+        group = self.select(query)
 
-    embed.title = f"Mythic +{keystone} Group"
-    embed.description = f"{self.tankEmoji} {tank.mention}\n{self.healerEmoji} {healer.mention}\n{self.dpsEmoji} {tank.mention}\n{self.dpsEmoji} {healer.mention}"
-    embed.add_field(name="Keystone Holder", value=keystoneHolder.mention, inline=True)
+        advertiser = re.findall('\(([^)]+)', embed.fields[6].value)[0]
 
-    await msg.edit(embed=embed)
-    # await ctx.message.channel.send(embed=group)
+        embed.title = f"Generated {group['keystone_level']} Group"
+        embed.description = (f"{self.tankEmoji} {tank}\n{self.healerEmoji} {healer}\n{self.dpsEmoji} {dpsOne}\n{self.dpsEmoji} {dpsTwo}\n\n{self.keystoneEmoji} {keystoneHolder}\n" +
+                             f"Please whisper `/w {advertiser} invite`")
+        embed.set_footer(text=f"{embed.footer.text} Group created at: {datetime.datetime.now().strftime('%H:%M:%S')}")
+        editedmsg = await message.edit(embed=embed)
+
+        createdMessage = (f"{self.tankEmoji} {tank} {self.healerEmoji} {healer} {self.dpsEmoji} {dpsOne} {self.dpsEmoji} {dpsTwo}\n" +
+                  f"Please whisper `/w {advertiser} invite`. See the message above for more details.\n" +
+                  f"Group id: {message.id}")
+        await message.channel.send(createdMessage)
+
+    def insert(self, query, values = []):
+        try:
+            cursor = self.db.cursor(prepared = True)
+            if values:
+                cursor.execute(query, values)
+            else:
+                cursor.execute(query)
+            self.db.commit()
+            cursor.close()
+        except mysql.connector.Error as error:
+            logging.error("Parameterized query failed: {}".format(error))
+
+    def delete(self, query):
+        try:
+            cursor = self.db.cursor(prepared = True)
+            cursor.execute(query)
+            self.db.commit()
+            cursor.close()
+        except mysql.connector.Error as error:
+            logging.error("Parameterized query failed: {}".format(error))
+
+    def select(self, query):
+        try:
+            cursor = self.db.cursor(dictionary = True)
+            cursor.execute(query)
+            result = cursor.fetchone()
+            cursor.close()
+
+            return result
+        except mysql.connector.Error as error:
+            logging.error("Parameterized query failed: {}".format(error))
+
+    # This will return the first booster with a keystone,
+    # if there are no keystone holders then it returns the first booster to sign up
+    def selectPriorityBooster(self, role, groupid, limit):
+        try:
+            query = f"""SELECT * FROM (
+                        (SELECT B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
+                    	ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 1 LIMIT 1)
+                        UNION
+                        (SELECT B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
+                    	ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 0 LIMIT {limit})
+                    ) UNIONED
+                    LIMIT {limit}"""
+            cursor = self.db.cursor(dictionary = True)
+            cursor.execute(query)
+            result = cursor.fetchall()
+            cursor.close()
+
+            return result
+        except mysql.connector.Error as error:
+            logging.error("Parameterized query failed: {}".format(error))
+
+    async def checkRoles(self, channel, data):
+        isValid = False
+        keystoneLevel = int(data["keystone_level"].partition("+")[2])
+
+        if keystoneLevel >= 15:
+            if data["faction"] == "Horde":
+                factionRole = self.getRole("Highkey Booster Horde")
+            elif data["faction"] == "Alliance":
+                factionRole = self.getRole("Highkey Booster Alliance")
+        else:
+            factionRole = self.getRole("Mplus Booster")
+
+        if keystoneLevel >= 18:
+            keystoneRole = self.getRole("Legendary")
+        if keystoneLevel <= 17:
+            keystoneRole = self.getRole("Epic")
+        if keystoneLevel <= 14:
+            keystoneRole = self.getRole("Rare")
+
+        userRoles = data["user"].roles
+
+        if factionRole in userRoles:
+            isValid = True
+        else:
+            await channel.send(f"{data['user'].mention}, you do NOT have the required `{factionRole}` role to join this group")
+            return False
+
+        if keystoneRole in userRoles:
+            isValid = True
+        else:
+            await channel.send(f"{data['user'].mention}, you do NOT have the required `{keystoneRole}` role to join this group")
+            return False
+
+        if data["role"] != "Any" and data["role"] != "All":
+            role = self.getRole(data["role"])
+            if role in userRoles:
+                isValid = True
+            else:
+                await channel.send(f"{data['user'].mention}, you do NOT have the required `{role}` role to join this group")
+                return False
+
+        if data["armor_type"] != "Any":
+            armorRole = self.getRoleById(data["armor_type"])
+            if str(armorRole) == "Cloth" or str(armorRole) == "Mail":
+                if data["role"] == "Tank":
+                    isValid = True
+                else:
+                    if armorRole in userRoles:
+                        isValid = True
+                    else:
+                        await channel.send(f"{data['user'].mention}, you do NOT have the required `{armorRole}` role to join this group")
+                        return False
+            else:
+                if armorRole in userRoles:
+                    isValid = True
+                else:
+                    await channel.send(f"{data['user'].mention}, you do NOT have the required `{armorRole}` role to join this group")
+                    return False
+
+        if "team" in data:
+            teamRole = self.getRole("M+ TEAM LEADER")
+            if teamRole in userRoles:
+                isValid = True
+            else:
+                await channel.send(f"{data['user'].mention}, you do NOT have the required `{teamRole}` role to join this group")
+                return False
+
+        return isValid
+
+    def getRole(self, role):
+        return discord.utils.find(lambda r: r.name == role, self.guild.roles)
+
+    def getRoleById(self, role):
+        role = re.sub('[<@&>]', '', role)
+        return discord.utils.find(lambda r: r.id == int(role), self.guild.roles)
 
 def setup(client):
     client.add_cog(Generate(client))
