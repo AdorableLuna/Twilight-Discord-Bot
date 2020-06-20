@@ -332,8 +332,7 @@ class Generate(commands.Cog):
             pass
 
         createdMessage = (f"{mentions}\n" +
-                  f"Your group was cancelled by the advertiser.\n" +
-                  f"Group id: {message.id}")
+                  f"Your group was cancelled by the advertiser.\n")
         await message.channel.send(createdMessage)
 
     async def updateGroup(self, message):
