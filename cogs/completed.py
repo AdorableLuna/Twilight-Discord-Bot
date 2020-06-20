@@ -57,7 +57,7 @@ class Completed(commands.Cog):
 
             TRUEDATA = [epot, potrealm, advertiser, booster1, booster2, booster3, booster4]
 
-            allRows = sheet.getAllRows(SPREADSHEET_ID)
+            allRows = sheet.getAllRows(SPREADSHEET_ID, f"{RANGE_NAME}:I")
             # Count starts at 11, because the first 11 rows are irrelevant
             rowCount = 11
             updated = False
