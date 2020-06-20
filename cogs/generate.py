@@ -211,12 +211,6 @@ class Generate(commands.Cog):
         elif "alliance" in channel:
             faction = "Alliance"
 
-        count = 6
-        advertiserNote = ""
-        for x in range(6, len(result)):
-            advertiserNote += result[count] + " "
-            count += 1
-
         if len(result) >= 6:
             keystone = result[2]
             keystoneLevel = int(keystone.partition("+")[2])
@@ -246,7 +240,14 @@ class Generate(commands.Cog):
                 tankRole = self.getRole("Tank").mention
                 healerRole = self.getRole("Healer").mention
                 damageRole = self.getRole("Damage").mention
-                mentions += tankRole + " " + healerRole + " " + damageRole
+                mentions += tankRole + " " + healerRole + " " + damageRole + " "
+
+            advertiserNote = ""
+            for x in range(6, len(result)):
+                if re.search('(?=.*<)(?=.*@)(?=.*&)(?=.*>)', result[x]):
+                    mentions += result[x] + " "
+                else:
+                    advertiserNote += result[x] + " "
 
             advertiser = f"{ctx.message.author.mention} ({result[0]})"
             if "k" in result[3]:
@@ -331,9 +332,10 @@ class Generate(commands.Cog):
         except:
             pass
 
-        createdMessage = (f"{mentions}\n" +
-                  f"Your group was cancelled by the advertiser.\n")
-        await message.channel.send(createdMessage)
+        if mentions:
+            createdMessage = (f"{mentions}\n" +
+                      f"Your group was cancelled by the advertiser.\n")
+            await message.channel.send(createdMessage)
 
     async def updateGroup(self, message):
         id = message.id
