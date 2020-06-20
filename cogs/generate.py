@@ -155,6 +155,7 @@ class Generate(commands.Cog):
 
             if user.mention == author:
                 await reaction.message.delete() #TODO: remove from database?
+                await self.cancelGroup(reaction.message)
 
     @commands.Cog.listener()
     async def on_reaction_remove(self, reaction, user):
@@ -303,6 +304,37 @@ class Generate(commands.Cog):
         else:
             # Needs more/less fields
             await ctx.message.channel.send(':x: The command you have entered is invalid. Please check if the command you entered is valid. :x:', delete_after=10.0)
+
+    async def cancelGroup(self, message):
+        id = message.id
+        mentions = ""
+
+        try:
+            tank = self.selectPriorityBooster("Tank", id, 1)[0]["Tank"]
+            mentions += tank + " "
+        except:
+            pass
+        try:
+            healer = self.selectPriorityBooster("Healer", id, 1)[0]["Healer"]
+            mentions += healer + " "
+        except:
+            pass
+        dps = self.selectPriorityBooster("Damage", id, 2)
+        try:
+            dpsOne = dps[0]["Damage"]
+            mentions += dpsOne + " "
+        except:
+            pass
+        try:
+            dpsTwo = dps[1]["Damage"]
+            mentions += dpsTwo
+        except:
+            pass
+
+        createdMessage = (f"{mentions}\n" +
+                  f"Your group was cancelled by the advertiser.\n" +
+                  f"Group id: {message.id}")
+        await message.channel.send(createdMessage)
 
     async def updateGroup(self, message):
         id = message.id
