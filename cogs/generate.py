@@ -121,7 +121,7 @@ class Generate(commands.Cog):
             existsInBooster = self.select(existsInBoosterQuery)
             existsInKeystone = self.select(existsInKeystoneQuery)
 
-            if not existsInKeystone["result"]:
+            if not existsInBooster["result"]:
                 query = f"""INSERT INTO mythicplus.booster (groupid, `user`, `role`, is_teamleader)
                            VALUES ('{id}', '{user.mention}', 'All', '1')"""
                 self.insert(query)
@@ -411,11 +411,14 @@ class Generate(commands.Cog):
     # if there are no keystone holders then it returns the first booster to sign up
     def selectPriorityBooster(self, role, groupid, limit):
         try:
-            query = f"""SELECT B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
-                    ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 1
-                    UNION
-                    SELECT B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
-                    ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 0 LIMIT {limit};"""
+            query = f"""SELECT * FROM (
+                        (SELECT B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
+                    	ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 1 LIMIT 1)
+                        UNION
+                        (SELECT B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
+                    	ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 0 LIMIT {limit})
+                    ) UNIONED
+                    LIMIT {limit}"""
             cursor = self.db.cursor(dictionary = True)
             cursor.execute(query)
             result = cursor.fetchall()
