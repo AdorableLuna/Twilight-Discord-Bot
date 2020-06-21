@@ -146,7 +146,7 @@ class Generate(commands.Cog):
                 self.insert(query, value)
 
             group = [user.mention, user.mention, user.mention, user.mention, user.mention]
-            await self.createGroup(reaction.message, group)
+            await self.createGroup(reaction.message, group, team=True)
             return
 
         if str(reaction.emoji) == str(self.cancelEmoji):
@@ -223,7 +223,7 @@ class Generate(commands.Cog):
                     mentions += tankRole + " "
 
                 armor = self.getRole(result[5]).mention
-                mentions += armor
+                mentions += armor + " "
             else:
                 armor = "Any"
 
@@ -378,7 +378,7 @@ class Generate(commands.Cog):
                             {self.tankEmoji} {tank}\n{self.healerEmoji} {healer}\n{self.dpsEmoji} {dpsOne}\n{self.dpsEmoji} {dpsTwo}\n\n{self.keystoneEmoji} {keystoneHolder}"""
         await message.edit(embed=embed)
 
-    async def createGroup(self, message, group):
+    async def createGroup(self, message, group, team=False):
         query = f"""UPDATE mythicplus.group
                 SET created = 1
                 WHERE id = {message.id}"""
@@ -403,8 +403,8 @@ class Generate(commands.Cog):
         embed.set_footer(text=f"{embed.footer.text} Group created at: {datetime.datetime.now().strftime('%H:%M:%S')}")
         editedmsg = await message.edit(embed=embed)
 
-        createdMessage = (f"{self.tankEmoji} {tank} {self.healerEmoji} {healer} {self.dpsEmoji} {dpsOne} {self.dpsEmoji} {dpsTwo}\n" +
-                  f"Please whisper `/w {advertiser} invite`. See the message above for more details.\n" +
+        mentions = f"{self.teamEmoji} {tank}" if team else f"{self.tankEmoji} {tank} {self.healerEmoji} {healer} {self.dpsEmoji} {dpsOne} {self.dpsEmoji} {dpsTwo}"
+        createdMessage = (f"{mentions}\nPlease whisper `/w {advertiser} invite`. See the message above for more details.\n" +
                   f"Group id: {message.id}")
         await message.channel.send(createdMessage)
 
