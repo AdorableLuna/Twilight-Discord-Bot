@@ -65,9 +65,13 @@ class Generate(commands.Cog):
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         if self.client.user == user: return
-
         id = reaction.message.id
         channel = reaction.message.channel
+
+        if self.getRole("M+ Banned") in user.roles:
+            await channel.send(f"\U0001F6AB {user.mention}, you are currently Mythic+ banned and therefore not allowed to sign up. \U0001F6AB")
+            await reaction.remove(user)
+            return
 
         query = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
         group = self.select(query)
