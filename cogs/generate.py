@@ -29,6 +29,27 @@ class Generate(commands.Cog):
             database = config["DATABASE"]["SCHEMA"],
             auth_plugin = config["DATABASE"]["AUTH_PLUGIN"]
         )
+        self.tankRoles = [
+            "Druid",
+            "Monk",
+            "Demon Hunter",
+            "Paladin",
+            "Warrior",
+            "Death Knight",
+            "Leather",
+            "Plate"
+        ]
+        self.healerRoles = [
+            "Druid",
+            "Monk",
+            "Paladin",
+            "Priest",
+            "Shaman",
+            "Cloth",
+            "Leather",
+            "Mail",
+            "Plate"
+        ]
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -44,6 +65,7 @@ class Generate(commands.Cog):
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         if self.client.user == user: return
+
         id = reaction.message.id
         channel = reaction.message.channel
 
@@ -222,7 +244,10 @@ class Generate(commands.Cog):
                     tankRole = self.getRole("Tank").mention
                     mentions += tankRole + " "
 
-                armor = self.getRole(result[5]).mention
+                if self.containsRoleMention(result[5]):
+                    armor = result[5]
+                else:
+                    armor = self.getRole(result[5]).mention
                 mentions += armor + " "
             else:
                 armor = "Any"
@@ -244,7 +269,7 @@ class Generate(commands.Cog):
 
             advertiserNote = ""
             for x in range(6, len(result)):
-                if re.search('(?=.*<)(?=.*@)(?=.*&)(?=.*>)', result[x]):
+                if self.containsRoleMention(result[x]):
                     mentions += result[x] + " "
                 else:
                     advertiserNote += result[x] + " "
@@ -504,16 +529,15 @@ class Generate(commands.Cog):
 
         if data["armor_type"] != "Any":
             armorRole = self.getRoleById(data["armor_type"])
-            if str(armorRole) == "Cloth" or str(armorRole) == "Mail":
-                if data["role"] == "Tank":
-                    isValid = True
-                else:
-                    if armorRole in userRoles:
-                        isValid = True
-                    else:
-                        await channel.send(f"{data['user'].mention}, you do NOT have the required `{armorRole}` role to join this group")
-                        return False
-            else:
+            isAllowedRole = False
+
+            if str(armorRole) not in self.tankRoles and data["role"] == "Tank":
+                isValid = True
+                isAllowedRole = True
+            elif str(armorRole) not in self.healerRoles and data["role"] == "Healer":
+                isValid = True
+                isAllowedRole = True
+            if not isAllowedRole:
                 if armorRole in userRoles:
                     isValid = True
                 else:
@@ -536,6 +560,9 @@ class Generate(commands.Cog):
     def getRoleById(self, role):
         role = re.sub('[<@&>]', '', role)
         return discord.utils.find(lambda r: r.id == int(role), self.guild.roles)
+
+    def containsRoleMention(self, string):
+        return re.search('(?=.*<)(?=.*@)(?=.*&)(?=.*>)', string)
 
 def setup(client):
     client.add_cog(Generate(client))
