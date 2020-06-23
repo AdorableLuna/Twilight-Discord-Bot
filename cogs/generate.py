@@ -286,7 +286,8 @@ class Generate(commands.Cog):
                 goldPot = result[3]
             boosterCut = math.ceil((int(goldPot) / 100) * 17.8)
 
-            embed = discord.Embed(title=f"Generating {result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n", color=0x5cf033)
+            embed = discord.Embed(title=f"Generating {result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group.\n" +
+                                        "First come first served **but** the bot will **prioritise** a keyholder over those who do not have one.\n", color=0x5cf033)
             embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
             embed.add_field(name="Gold Pot", value=result[3], inline=True)
             embed.add_field(name="Booster Cut", value=f"{boosterCut:n}", inline=True)
