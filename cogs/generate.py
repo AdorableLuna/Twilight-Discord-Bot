@@ -267,7 +267,10 @@ class Generate(commands.Cog):
                 else:
                     armor = "Any"
 
-                    if keystoneLevel >= 15:
+                    if keystoneLevel >= 18:
+                        keystoneRole = self.getRole("Legendary").mention
+                        mentions += keystoneRole + " "
+                    elif keystoneLevel >= 15 and keystoneLevel < 18:
                         if faction == "Horde":
                             keystoneRole = self.getRole("Highkey Booster Horde").mention
                         elif faction == "Alliance":
