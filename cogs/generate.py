@@ -318,10 +318,12 @@ class Generate(commands.Cog):
             values = (msg.id, embed.title, embed.description, faction, result[1], result[3], boosterCut, result[2], result[4], armor, advertiser, advertiserNote, embed.footer.text)
             self.insert(query, values)
 
-            for additionalRole in additionalRoles:
-                query = "INSERT INTO mythicplus.group_additional_roles (groupid, role) VALUES (%s, %s)"
-                values = (msg.id, additionalRole)
-                self.insert(query, values)
+            if additionalRoles:
+                query = "INSERT INTO mythicplus.group_additional_roles (groupid, role) VALUES "
+                for additionalRole in additionalRoles:
+                    query += f"('{msg.id}', '{additionalRole}'), "
+
+                self.insert(query[:-2])
 
             # Tank
             await msg.add_reaction(self.tankEmoji)
