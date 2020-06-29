@@ -73,13 +73,15 @@ class Generate(commands.Cog):
             await reaction.remove(user)
             return
 
-        query = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
-        group = self.select(query)
+        groupQuery = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
+        group = self.select(groupQuery)
 
         if group["created"]: return
+        additionalRolesQuery = f"SELECT `role` FROM mythicplus.group_additional_roles WHERE groupid = '{id}'"
+        group["additional_roles"] = self.select(additionalRolesQuery, True)
 
         if str(reaction.emoji) == str(self.tankEmoji):
-            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Tank"}
+            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Tank", "additional_roles": group["additional_roles"]}
             if not await self.checkRoles(channel, data):
                 await reaction.remove(user)
                 return
@@ -87,7 +89,7 @@ class Generate(commands.Cog):
             role = "Tank"
 
         if str(reaction.emoji) == str(self.healerEmoji):
-            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Healer"}
+            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Healer", "additional_roles": group["additional_roles"]}
             if not await self.checkRoles(channel, data):
                 await reaction.remove(user)
                 return
@@ -95,7 +97,7 @@ class Generate(commands.Cog):
             role = "Healer"
 
         if str(reaction.emoji) == str(self.dpsEmoji):
-            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Damage"}
+            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Damage", "additional_roles": group["additional_roles"]}
             if not await self.checkRoles(channel, data):
                 await reaction.remove(user)
                 return
@@ -137,7 +139,7 @@ class Generate(commands.Cog):
             await self.updateGroup(reaction.message)
 
         if str(reaction.emoji) == str(self.teamEmoji):
-            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "All", "team": True}
+            data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "All", "team": True, "additional_roles": group["additional_roles"]}
             if not await self.checkRoles(channel, data):
                 await reaction.remove(user)
                 return
@@ -249,11 +251,11 @@ class Generate(commands.Cog):
                     armor = self.getRole(result[5]).mention
 
             advertiserNote = ""
-            additionalRoles = False
+            additionalRoles = []
             for x in range(6, len(result)):
                 if self.containsRoleMention(result[x]):
                     mentions += result[x] + " "
-                    additionalRoles = True
+                    additionalRoles.append(result[x])
                 else:
                     advertiserNote += result[x] + " "
 
@@ -315,6 +317,11 @@ class Generate(commands.Cog):
                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
             values = (msg.id, embed.title, embed.description, faction, result[1], result[3], boosterCut, result[2], result[4], armor, advertiser, advertiserNote, embed.footer.text)
             self.insert(query, values)
+
+            for additionalRole in additionalRoles:
+                query = "INSERT INTO mythicplus.group_additional_roles (groupid, role) VALUES (%s, %s)"
+                values = (msg.id, additionalRole)
+                self.insert(query, values)
 
             # Tank
             await msg.add_reaction(self.tankEmoji)
@@ -466,11 +473,14 @@ class Generate(commands.Cog):
         except mysql.connector.Error as error:
             logging.error("Parameterized query failed: {}".format(error))
 
-    def select(self, query):
+    def select(self, query, multipleRows = False):
         try:
             cursor = self.db.cursor(dictionary = True)
             cursor.execute(query)
-            result = cursor.fetchone()
+            if multipleRows:
+                result = cursor.fetchall()
+            else:
+                result = cursor.fetchone()
             cursor.close()
 
             return result
@@ -519,16 +529,40 @@ class Generate(commands.Cog):
 
         userRoles = data["user"].roles
 
+        if data["additional_roles"]:
+            allRoles = ""
+
+            for additionalRole in data["additional_roles"]:
+                additionalRole = self.getRoleById(additionalRole["role"])
+                allRoles += f"`{additionalRole}`, "
+                isAllowedRole = False
+
+                if str(additionalRole) not in self.tankRoles and data["role"] == "Tank":
+                    isValid = True
+                    isAllowedRole = True
+                elif str(additionalRole) not in self.healerRoles and data["role"] == "Healer":
+                    isValid = True
+                    isAllowedRole = True
+                if not isAllowedRole:
+                    if additionalRole in userRoles:
+                        isValid = True
+                        break
+
+            if not isValid:
+                await channel.send(f"{data['user'].mention}, you do **NOT** have any of the required {allRoles[:-2]} role(s) to join this group.")
+                return False
+
+
         if factionRole in userRoles:
             isValid = True
         else:
-            await channel.send(f"{data['user'].mention}, you do NOT have the required `{factionRole}` role to join this group")
+            await channel.send(f"{data['user'].mention}, you do **NOT** have the required `{factionRole}` role to join this group.")
             return False
 
         if keystoneRole in userRoles:
             isValid = True
         else:
-            await channel.send(f"{data['user'].mention}, you do NOT have the required `{keystoneRole}` role to join this group")
+            await channel.send(f"{data['user'].mention}, you do **NOT** have the required `{keystoneRole}` role to join this group.")
             return False
 
         if data["role"] != "Any" and data["role"] != "All":
@@ -536,7 +570,7 @@ class Generate(commands.Cog):
             if role in userRoles:
                 isValid = True
             else:
-                await channel.send(f"{data['user'].mention}, you do NOT have the required `{role}` role to join this group")
+                await channel.send(f"{data['user'].mention}, you do **NOT** have the required `{role}` role to join this group.")
                 return False
 
         if data["armor_type"] != "Any":
@@ -553,7 +587,7 @@ class Generate(commands.Cog):
                 if armorRole in userRoles:
                     isValid = True
                 else:
-                    await channel.send(f"{data['user'].mention}, you do NOT have the required `{armorRole}` role to join this group")
+                    await channel.send(f"{data['user'].mention}, you do **NOT** have the required `{armorRole}` role to join this group.")
                     return False
 
         if "team" in data:
@@ -561,7 +595,7 @@ class Generate(commands.Cog):
             if teamRole in userRoles:
                 isValid = True
             else:
-                await channel.send(f"{data['user'].mention}, you do NOT have the required `{teamRole}` role to join this group")
+                await channel.send(f"{data['user'].mention}, you do **NOT** have the required `{teamRole}` role to join this group.")
                 return False
 
         return isValid
