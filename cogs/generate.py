@@ -252,15 +252,16 @@ class Generate(commands.Cog):
 
             advertiserNote = ""
             additionalRoles = []
-            for x in range(6, len(result)):
-                if self.containsRoleMention(result[x]):
-                    mentions += result[x] + " "
-                    additionalRoles.append(result[x])
-                else:
-                    advertiserNote += result[x] + " "
+            if keystoneLevel < 18:
+                for x in range(6, len(result)):
+                    if self.containsRoleMention(result[x]):
+                        mentions += result[x] + " "
+                        additionalRoles.append(result[x])
+                    else:
+                        advertiserNote += result[x] + " "
 
             if not additionalRoles:
-                if(result[5] != "Any"):
+                if keystoneLevel < 18 and result[5] != "Any":
                     if result[5] == "Cloth" or result[5] == "Mail":
                         tankRole = self.getRole("Tank").mention
                         mentions += tankRole + " "
@@ -272,20 +273,21 @@ class Generate(commands.Cog):
                     if keystoneLevel >= 18:
                         keystoneRole = self.getRole("Legendary").mention
                         mentions += keystoneRole + " "
-                    elif keystoneLevel >= 15 and keystoneLevel < 18:
-                        if faction == "Horde":
-                            keystoneRole = self.getRole("Highkey Booster Horde").mention
-                        elif faction == "Alliance":
-                            keystoneRole = self.getRole("Highkey Booster Alliance").mention
-                        mentions += keystoneRole + " "
-                    elif keystoneLevel >= 10 and keystoneLevel <= 14:
-                        keystoneRole = self.getRole("Mplus Booster").mention
-                        mentions += keystoneRole + " "
+                    else:
+                        if keystoneLevel >= 15 and keystoneLevel < 18:
+                            if faction == "Horde":
+                                keystoneRole = self.getRole("Highkey Booster Horde").mention
+                            elif faction == "Alliance":
+                                keystoneRole = self.getRole("Highkey Booster Alliance").mention
+                            mentions += keystoneRole + " "
+                        elif keystoneLevel >= 10 and keystoneLevel <= 14:
+                            keystoneRole = self.getRole("Mplus Booster").mention
+                            mentions += keystoneRole + " "
 
-                    tankRole = self.getRole("Tank").mention
-                    healerRole = self.getRole("Healer").mention
-                    damageRole = self.getRole("Damage").mention
-                    mentions += tankRole + " " + healerRole + " " + damageRole + " "
+                        tankRole = self.getRole("Tank").mention
+                        healerRole = self.getRole("Healer").mention
+                        damageRole = self.getRole("Damage").mention
+                        mentions += tankRole + " " + healerRole + " " + damageRole + " "
 
             advertiser = f"{ctx.message.author.mention} ({result[0]})"
             if "k" in result[3]:
