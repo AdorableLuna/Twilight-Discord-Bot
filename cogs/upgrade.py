@@ -47,6 +47,7 @@ class Upgrade(commands.Cog):
                 rareRole = self.getRole("Rare")
                 epicRole = self.getRole("Epic")
                 legendaryRole = self.getRole("Legendary")
+                highKeyRole = self.getRole(f"Highkey Booster {data['faction'].capitalize()}")
                 role = ""
 
                 if rareRole in userRoles and epicRole in userRoles and legendaryRole in userRoles:
@@ -57,10 +58,10 @@ class Upgrade(commands.Cog):
                         await author.add_roles(role)
                     if allScore > 2700:
                         role = epicRole
-                        await author.add_roles(role)
+                        await author.add_roles(role, highKeyRole)
                     if allScore > 3500:
                         role = legendaryRole
-                        await author.add_roles(role)
+                        await author.add_roles(role, highKeyRole)
 
                     if role:
                         description = f"You have been granted the role {role.mention}.\n\n"
