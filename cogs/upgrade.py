@@ -16,12 +16,15 @@ class Upgrade(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         self.guild = self.client.get_guild(config["GUILD_ID"])
+        self.channelID = 728967077381275658
         self.tankEmoji = self.client.get_emoji(714930608266018859)
         self.healerEmoji = self.client.get_emoji(714930600267612181)
         self.dpsEmoji = self.client.get_emoji(714930578461425724)
 
     @commands.command()
     async def upgrade(self, ctx):
+        if ctx.message.channel.id != self.channelID: return
+
         author = ctx.message.author
         character = ctx.message.content[9:].split('-')
         name = character[0]
