@@ -76,7 +76,7 @@ class Generate(commands.Cog):
         groupQuery = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
         group = self.select(groupQuery)
 
-        if group["created"]: return
+        if group is None or group["created"]: return
         additionalRolesQuery = f"SELECT `role` FROM mythicplus.group_additional_roles WHERE groupid = '{id}'"
         group["additional_roles"] = self.select(additionalRolesQuery, True)
 
