@@ -65,6 +65,9 @@ class Generate(commands.Cog):
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         if self.client.user == user: return
+        if "boosts" not in reaction.message.channel.name: return
+        if not reaction.message.embeds: return
+
         id = reaction.message.id
         channel = reaction.message.channel
 
