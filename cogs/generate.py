@@ -513,11 +513,11 @@ class Generate(commands.Cog):
     def selectPriorityBooster(self, role, groupid, limit):
         try:
             query = f"""SELECT * FROM (
-                        (SELECT B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
-                    	ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 1 LIMIT 1)
+                        (SELECT B.id, B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
+                    	ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 1 ORDER BY B.id ASC LIMIT 1)
                         UNION
-                        (SELECT B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
-                    	ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 0 LIMIT {limit})
+                        (SELECT B.id, B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
+                    	ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 0 ORDER BY B.id ASC LIMIT {limit})
                     ) UNIONED
                     LIMIT {limit}"""
             cursor = self.db.cursor(dictionary = True)
