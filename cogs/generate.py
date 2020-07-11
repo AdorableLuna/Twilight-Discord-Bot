@@ -54,6 +54,7 @@ class Generate(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         self.guild = self.client.get_guild(config["GUILD_ID"])
+        self.completedChannel = self.client.get_channel(731479403862949928)
         self.tankEmoji = self.client.get_emoji(714930608266018859)
         self.healerEmoji = self.client.get_emoji(714930600267612181)
         self.dpsEmoji = self.client.get_emoji(714930578461425724)
@@ -79,7 +80,22 @@ class Generate(commands.Cog):
         groupQuery = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
         group = self.select(groupQuery)
 
-        if group is None or group["created"]: return
+        if group is None: return
+        author = group["advertiser"]
+        author = author.split(" ", 1)[0]
+
+        if group["created"]:
+            if str(reaction.emoji) == str(self.doneEmoji) and user.mention == author:
+                gold_pot = group["gold_pot"]
+                if "k" in gold_pot:
+                    gold_pot = gold_pot.replace('k', '')
+                    gold_pot = str(gold_pot) + "000"
+
+                party = re.findall("<@!.*?>", reaction.message.embeds[0].description)
+                await self.ctx.invoke(self.client.get_command('completed'), gold_pot, group['payment_realm'], author, party[0], party[1], party[2], party[3])
+
+            return
+
         additionalRolesQuery = f"SELECT `role` FROM mythicplus.group_additional_roles WHERE groupid = '{id}'"
         group["additional_roles"] = self.select(additionalRolesQuery, True)
 
@@ -181,9 +197,6 @@ class Generate(commands.Cog):
             return
 
         if str(reaction.emoji) == str(self.cancelEmoji):
-            author = group["advertiser"]
-            author = author.split(" ", 1)[0]
-
             if user.mention == author:
                 await reaction.message.delete() #TODO: remove from database?
                 await self.cancelGroup(reaction.message)
@@ -233,6 +246,7 @@ class Generate(commands.Cog):
     @commands.command()
     @commands.has_any_role("Advertiser", "Management", "Council")
     async def generate(self, ctx):
+        self.ctx = ctx
         msg = ctx.message.content[10:]
         result = [x.strip() for x in re.split(' ', msg)]
         channel = ctx.message.channel.name
@@ -348,8 +362,8 @@ class Generate(commands.Cog):
             # Cancel
             await msg.add_reaction(self.cancelEmoji)
 
-            # Done - TODO: Add logic
-            # await msg.add_reaction(self.doneEmoji)
+            # Done
+            await msg.add_reaction(self.doneEmoji)
 
             await ctx.message.delete()
 
