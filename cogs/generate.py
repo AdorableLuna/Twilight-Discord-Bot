@@ -512,7 +512,7 @@ class Generate(commands.Cog):
     # if there are no keystone holders then it returns the first booster to sign up
     def selectPriorityBooster(self, role, groupid, limit):
         try:
-            query = f"""SELECT * FROM (
+            query = f"""SELECT {role} FROM (
                         (SELECT B.id, B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
                     	ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 1 ORDER BY B.id ASC LIMIT 1)
                         UNION
