@@ -5,13 +5,12 @@ import asyncio
 import datetime
 import time
 import itertools
-import mysql.connector
-import logging
 import math
 import locale
 
 from discord.utils import get
 from discord.ext import commands
+from db import dbconnection as dbc
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -22,13 +21,7 @@ class Generate(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-        self.db = mysql.connector.connect(
-            host = config["DATABASE"]["HOST"],
-            user = config["DATABASE"]["USER"],
-            passwd = config["DATABASE"]["PASSWORD"],
-            database = config["DATABASE"]["SCHEMA"],
-            auth_plugin = config["DATABASE"]["AUTH_PLUGIN"]
-        )
+        self.dbc = dbc.DBConnection()
         self.tankRoles = [
             "Druid",
             "Monk",
@@ -78,7 +71,7 @@ class Generate(commands.Cog):
             return
 
         groupQuery = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
-        group = self.select(groupQuery)
+        group = self.dbc.select(groupQuery)
 
         if group is None: return
         author = group["advertiser"]
@@ -97,7 +90,7 @@ class Generate(commands.Cog):
             return
 
         additionalRolesQuery = f"SELECT `role` FROM mythicplus.group_additional_roles WHERE groupid = '{id}'"
-        group["additional_roles"] = self.select(additionalRolesQuery, True)
+        group["additional_roles"] = self.dbc.select(additionalRolesQuery, True)
 
         if str(reaction.emoji) == str(self.tankEmoji):
             data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Tank", "additional_roles": group["additional_roles"]}
@@ -129,26 +122,26 @@ class Generate(commands.Cog):
                        WHERE NOT EXISTS (SELECT groupid, `user` FROM mythicplus.booster
                                 WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
             existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
-            self.insert(query)
-            existsInKeystone = self.select(existsQuery)
+            self.dbc.insert(query)
+            existsInKeystone = self.dbc.select(existsQuery)
 
             if not existsInKeystone["result"]:
                 query = f"""INSERT INTO mythicplus.keystone (groupid, `user`)
                            SELECT '{id}', '{user.mention}' FROM DUAL
                            WHERE NOT EXISTS (SELECT groupid, `user` FROM mythicplus.keystone
                                     WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
-                self.insert(query)
+                self.dbc.insert(query)
 
         if str(reaction.emoji) == str(self.keystoneEmoji):
             existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
-            existsInKeystone = self.select(existsQuery)
+            existsInKeystone = self.dbc.select(existsQuery)
 
             if existsInKeystone["result"]:
                 query = f"""UPDATE mythicplus.keystone
                         SET has_keystone = 1
                         WHERE groupid = %s AND user = %s"""
                 value = (id, user.mention)
-                self.insert(query, value)
+                self.dbc.insert(query, value)
             else:
                 await reaction.remove(user)
                 await channel.send(f"{user.mention}, assign yourself a role before marking yourself as a keystone holder.")
@@ -165,32 +158,32 @@ class Generate(commands.Cog):
 
             existsInBoosterQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
             existsInKeystoneQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
-            existsInBooster = self.select(existsInBoosterQuery)
-            existsInKeystone = self.select(existsInKeystoneQuery)
+            existsInBooster = self.dbc.select(existsInBoosterQuery)
+            existsInKeystone = self.dbc.select(existsInKeystoneQuery)
 
             if not existsInBooster["result"]:
                 query = f"""INSERT INTO mythicplus.booster (groupid, `user`, `role`, is_teamleader)
                            VALUES ('{id}', '{user.mention}', 'All', '1')"""
-                self.insert(query)
+                self.dbc.insert(query)
             else:
                 query = f"""UPDATE mythicplus.booster
                         SET `role` = 'All', is_teamleader = 1
                         WHERE groupid = %s AND user = %s"""
                 value = (id, user.mention)
-                self.insert(query, value)
+                self.dbc.insert(query, value)
 
             if not existsInKeystone["result"]:
                 query = f"""INSERT INTO mythicplus.keystone (groupid, `user`, has_keystone)
                            SELECT '{id}', '{user.mention}', 1 FROM DUAL
                            WHERE NOT EXISTS (SELECT groupid, `user` FROM mythicplus.keystone
                                     WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
-                self.insert(query)
+                self.dbc.insert(query)
             else:
                 query = f"""UPDATE mythicplus.keystone
                         SET has_keystone = 1
                         WHERE groupid = %s AND user = %s"""
                 value = (id, user.mention)
-                self.insert(query, value)
+                self.dbc.insert(query, value)
 
             group = [user.mention, user.mention, user.mention, user.mention, user.mention]
             await self.createGroup(reaction.message, group, team=True)
@@ -208,7 +201,7 @@ class Generate(commands.Cog):
         channel = reaction.message.channel
 
         query = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
-        group = self.select(query)
+        group = self.dbc.select(query)
 
         if group["created"]: return
 
@@ -223,22 +216,22 @@ class Generate(commands.Cog):
 
         if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji):
             existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}' AND role = '{role}') as 'result'"
-            existsInBooster = self.select(existsQuery)
+            existsInBooster = self.dbc.select(existsQuery)
 
             if existsInBooster["result"]:
                 query = f"""DELETE FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}' AND role = '{role}'"""
-                self.delete(query)
+                self.dbc.delete(query)
 
         if str(reaction.emoji) == str(self.keystoneEmoji):
             existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
-            existsInKeystone = self.select(existsQuery)
+            existsInKeystone = self.dbc.select(existsQuery)
 
             if existsInKeystone["result"]:
                 query = f"""UPDATE mythicplus.keystone
                         SET has_keystone = 0
                         WHERE groupid = %s AND user = %s"""
                 value = (id, user.mention)
-                self.insert(query, value)
+                self.dbc.insert(query, value)
 
         if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji) or str(reaction.emoji) == str(self.keystoneEmoji):
             await self.updateGroup(reaction.message)
@@ -335,14 +328,14 @@ class Generate(commands.Cog):
             query = """INSERT INTO mythicplus.group (id, title, description, faction, payment_realm, gold_pot, booster_cut, keystone_level, dungeon, armor_type, advertiser, advertiser_note, footer)
                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
             values = (msg.id, embed.title, embed.description, faction, result[1], result[3], boosterCut, result[2], result[4], armor, advertiser, advertiserNote, embed.footer.text)
-            self.insert(query, values)
+            self.dbc.insert(query, values)
 
             if additionalRoles:
                 query = "INSERT INTO mythicplus.group_additional_roles (groupid, role) VALUES "
                 for additionalRole in additionalRoles:
                     query += f"('{msg.id}', '{additionalRole}'), "
 
-                self.insert(query[:-2])
+                self.dbc.insert(query[:-2])
 
             # Tank
             await msg.add_reaction(self.tankEmoji)
@@ -376,16 +369,16 @@ class Generate(commands.Cog):
         mentions = ""
 
         try:
-            tank = self.selectPriorityBooster("Tank", id, 1)[0]["Tank"]
+            tank = self.dbc.selectPriorityBooster("Tank", id, 1)[0]["Tank"]
             mentions += tank + " "
         except:
             pass
         try:
-            healer = self.selectPriorityBooster("Healer", id, 1)[0]["Healer"]
+            healer = self.dbc.selectPriorityBooster("Healer", id, 1)[0]["Healer"]
             mentions += healer + " "
         except:
             pass
-        dps = self.selectPriorityBooster("Damage", id, 2)
+        dps = self.dbc.selectPriorityBooster("Damage", id, 2)
         try:
             dpsOne = dps[0]["Damage"]
             mentions += dpsOne + " "
@@ -406,14 +399,14 @@ class Generate(commands.Cog):
         id = message.id
 
         try:
-            tank = self.selectPriorityBooster("Tank", id, 1)[0]["Tank"]
+            tank = self.dbc.selectPriorityBooster("Tank", id, 1)[0]["Tank"]
         except:
             tank = ""
         try:
-            healer = self.selectPriorityBooster("Healer", id, 1)[0]["Healer"]
+            healer = self.dbc.selectPriorityBooster("Healer", id, 1)[0]["Healer"]
         except:
             healer = ""
-        dps = self.selectPriorityBooster("Damage", id, 2)
+        dps = self.dbc.selectPriorityBooster("Damage", id, 2)
         try:
             dpsOne = dps[0]["Damage"]
         except:
@@ -428,7 +421,7 @@ class Generate(commands.Cog):
                               EXISTS
                                 (SELECT 1
                                   FROM mythicplus.booster B WHERE K.`user` = B.`user`) LIMIT 1"""
-            keystone = self.select(keystoneQuery)
+            keystone = self.dbc.select(keystoneQuery)
             keystoneHolder = keystone["user"]
         except:
             keystoneHolder = ""
@@ -447,7 +440,7 @@ class Generate(commands.Cog):
         query = f"""UPDATE mythicplus.group
                 SET created = 1
                 WHERE id = {message.id}"""
-        self.insert(query)
+        self.dbc.insert(query)
 
         embed = message.embeds[0]
 
@@ -458,7 +451,7 @@ class Generate(commands.Cog):
         keystoneHolder = group[4]
 
         query = f"SELECT keystone_level FROM mythicplus.group WHERE id = '{message.id}'"
-        group = self.select(query)
+        group = self.dbc.select(query)
 
         advertiser = re.findall('\(([^)]+)', embed.fields[6].value)[0]
 
@@ -472,62 +465,6 @@ class Generate(commands.Cog):
         createdMessage = (f"{mentions}\nPlease whisper `/w {advertiser} invite`. See the message above for more details.\n" +
                   f"Group id: {message.id}")
         await message.channel.send(createdMessage)
-
-    def insert(self, query, values = []):
-        try:
-            cursor = self.db.cursor(prepared = True)
-            if values:
-                cursor.execute(query, values)
-            else:
-                cursor.execute(query)
-            self.db.commit()
-            cursor.close()
-        except mysql.connector.Error as error:
-            logging.error("Parameterized query failed: {}".format(error))
-
-    def delete(self, query):
-        try:
-            cursor = self.db.cursor(prepared = True)
-            cursor.execute(query)
-            self.db.commit()
-            cursor.close()
-        except mysql.connector.Error as error:
-            logging.error("Parameterized query failed: {}".format(error))
-
-    def select(self, query, multipleRows = False):
-        try:
-            cursor = self.db.cursor(dictionary = True)
-            cursor.execute(query)
-            if multipleRows:
-                result = cursor.fetchall()
-            else:
-                result = cursor.fetchone()
-            cursor.close()
-
-            return result
-        except mysql.connector.Error as error:
-            logging.error("Parameterized query failed: {}".format(error))
-
-    # This will return the first booster with a keystone,
-    # if there are no keystone holders then it returns the first booster to sign up
-    def selectPriorityBooster(self, role, groupid, limit):
-        try:
-            query = f"""SELECT {role} FROM (
-                        (SELECT B.id, B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
-                    	ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 1 ORDER BY B.id ASC LIMIT 1)
-                        UNION
-                        (SELECT B.id, B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
-                    	ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 0 ORDER BY B.id ASC LIMIT {limit})
-                    ) UNIONED
-                    LIMIT {limit}"""
-            cursor = self.db.cursor(dictionary = True)
-            cursor.execute(query)
-            result = cursor.fetchall()
-            cursor.close()
-
-            return result
-        except mysql.connector.Error as error:
-            logging.error("Parameterized query failed: {}".format(error))
 
     async def checkRoles(self, channel, data):
         isValid = False
