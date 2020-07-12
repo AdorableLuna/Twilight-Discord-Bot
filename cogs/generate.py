@@ -197,13 +197,14 @@ class Generate(commands.Cog):
     @commands.Cog.listener()
     async def on_reaction_remove(self, reaction, user):
         if self.client.user == user: return
+        if "boosts" not in reaction.message.channel.name: return
+        if not reaction.message.embeds: return
         id = reaction.message.id
         channel = reaction.message.channel
 
         query = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
         group = self.dbc.select(query)
-
-        if group["created"]: return
+        if group is None or group["created"]: return
 
         if str(reaction.emoji) == str(self.tankEmoji):
             role = "Tank"
