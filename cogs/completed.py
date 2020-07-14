@@ -100,10 +100,16 @@ class Completed(commands.Cog):
             await self.channel.send(':x: The command you have entered is invalid. Please check the correct formatting in the pins. :x:', delete_after=10.0)
 
 def checkName(guild, name):
-    if name.startswith('<'):
-        name = name[3:-1]
+    if re.search('^<@[0-9>]+$', name):
+        name = name[2:-1]
+        member = guild.get_member(int(name))
 
-        return guild.get_member(int(name)).nick
+        return guild.get_member(int(name)).name
+    elif re.search('^<@![0-9>]+$', name):
+        name = name[3:-1]
+        member = guild.get_member(int(name))
+
+        return guild.get_member(int(name)).display_name
     else:
         return name
 

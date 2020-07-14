@@ -84,7 +84,9 @@ class Generate(commands.Cog):
                     gold_pot = gold_pot.replace('k', '')
                     gold_pot = str(gold_pot) + "000"
 
-                party = re.findall("<@!.*?>", reaction.message.embeds[0].description)
+                usernameRegex = "<@.*?>"
+                nicknameRegex = "<@!.*?>"
+                party = re.compile("(%s|%s)" % (usernameRegex, nicknameRegex)).findall(reaction.message.embeds[0].description)
                 await self.ctx.invoke(self.client.get_command('completed'), gold_pot, group['payment_realm'], author, party[0], party[1], party[2], party[3])
 
             return
