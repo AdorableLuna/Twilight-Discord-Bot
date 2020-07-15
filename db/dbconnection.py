@@ -72,12 +72,14 @@ class DBConnection(object):
             connection = self.get_connection()
 
             if connection.is_connected():
-                query = f"""SELECT {role} FROM (
-                            (SELECT B.id, B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
-                            ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 1 ORDER BY B.id ASC LIMIT 1)
+                # First SELECT retrieves the first keystoneholder if there is one
+                # Second SELECT retrieves the non keystoneholder if there are no keystoneholders
+                query = f"""SELECT Distinct {role} FROM (
+                            (SELECT K.id, B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
+                            ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 1 ORDER BY K.id ASC LIMIT 1)
                             UNION
-                            (SELECT B.id, B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
-                            ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 0 ORDER BY B.id ASC LIMIT {limit})
+                            (SELECT B.id, B.`user` as '{role}' FROM mythicplus.booster B LEFT JOIN mythicplus.keystone K
+                            ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE B.groupid = '{groupid}' AND B.`role` = '{role}' ORDER BY B.id ASC LIMIT {limit})
                         ) UNIONED
                         LIMIT {limit}"""
                 cursor = connection.cursor(dictionary = True)

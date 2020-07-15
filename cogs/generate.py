@@ -123,27 +123,17 @@ class Generate(commands.Cog):
                        SELECT '{id}', '{user.mention}', '{role}' FROM DUAL
                        WHERE NOT EXISTS (SELECT groupid, `user` FROM mythicplus.booster
                                 WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
-            existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
             self.dbc.insert(query)
-            existsInKeystone = self.dbc.select(existsQuery)
-
-            if not existsInKeystone["result"]:
-                query = f"""INSERT INTO mythicplus.keystone (groupid, `user`)
-                           SELECT '{id}', '{user.mention}' FROM DUAL
-                           WHERE NOT EXISTS (SELECT groupid, `user` FROM mythicplus.keystone
-                                    WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
-                self.dbc.insert(query)
 
         if str(reaction.emoji) == str(self.keystoneEmoji):
-            existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
-            existsInKeystone = self.dbc.select(existsQuery)
-
-            if existsInKeystone["result"]:
-                query = f"""UPDATE mythicplus.keystone
-                        SET has_keystone = 1
-                        WHERE groupid = %s AND user = %s"""
-                value = (id, user.mention)
-                self.dbc.insert(query, value)
+            existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
+            existsInBooster = self.dbc.select(existsQuery)
+            if existsInBooster["result"]:
+                query = f"""INSERT INTO mythicplus.keystone (groupid, `user`, `has_keystone`)
+                            SELECT '{id}', '{user.mention}', 1 FROM DUAL
+                            WHERE NOT EXISTS (SELECT groupid, `user` FROM mythicplus.keystone
+                                    WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
+                self.dbc.insert(query)
             else:
                 await reaction.remove(user)
                 await channel.send(f"{user.mention}, assign yourself a role before marking yourself as a keystone holder.")
@@ -218,23 +208,12 @@ class Generate(commands.Cog):
             role = "Damage"
 
         if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji):
-            existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}' AND role = '{role}') as 'result'"
-            existsInBooster = self.dbc.select(existsQuery)
-
-            if existsInBooster["result"]:
-                query = f"""DELETE FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}' AND role = '{role}'"""
-                self.dbc.delete(query)
+            query = f"""DELETE FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}' AND role = '{role}'"""
+            self.dbc.delete(query)
 
         if str(reaction.emoji) == str(self.keystoneEmoji):
-            existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
-            existsInKeystone = self.dbc.select(existsQuery)
-
-            if existsInKeystone["result"]:
-                query = f"""UPDATE mythicplus.keystone
-                        SET has_keystone = 0
-                        WHERE groupid = %s AND user = %s"""
-                value = (id, user.mention)
-                self.dbc.insert(query, value)
+            query = f"""DELETE FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}'"""
+            self.dbc.delete(query)
 
         if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji) or str(reaction.emoji) == str(self.keystoneEmoji):
             await self.updateGroup(reaction.message)
