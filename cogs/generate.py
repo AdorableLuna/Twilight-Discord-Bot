@@ -419,11 +419,11 @@ class Generate(commands.Cog):
         except:
             dpsTwo = ""
         try:
-            keystoneQuery = f"""SELECT `user`
-                              FROM mythicplus.keystone K WHERE groupid = '{id}' AND has_keystone = 1 AND
-                              EXISTS
-                                (SELECT 1
-                                  FROM mythicplus.booster B WHERE K.`user` = B.`user`) LIMIT 1"""
+            keystoneQuery = f"""SELECT B.`user` FROM mythicplus.booster B
+                                JOIN mythicplus.keystone K
+                                ON B.`user` = K.`user`
+                                AND B.groupid = K.groupid
+                                WHERE K.groupid = '{id}' AND K.has_keystone = 1 LIMIT 1"""
             keystone = self.dbc.select(keystoneQuery)
             keystoneHolder = keystone["user"]
         except:
