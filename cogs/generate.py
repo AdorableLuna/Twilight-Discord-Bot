@@ -381,14 +381,30 @@ class Generate(commands.Cog):
         id = message.id
 
         try:
-            tank = self.dbc.selectPriorityBooster("Tank", id, 1)[0]["Tank"]
+            keystoneQuery = f"""SELECT B.`user`, COUNT(B.`user`) as total FROM mythicplus.booster B
+                                JOIN mythicplus.keystone K
+                                ON B.`user` = K.`user`
+                                AND B.groupid = K.groupid
+                                WHERE K.groupid = '{id}' AND K.has_keystone = 1 LIMIT 1"""
+            keystone = self.dbc.select(keystoneQuery)
+            keystoneHolder = "" if keystone["user"] is None else keystone["user"]
+            totalKeystones = keystone["total"]
+        except:
+            keystoneHolder = ""
+            totalKeystones = 0
+
+        keystone = False
+        if totalKeystones > 1: keystone = True
+
+        try:
+            tank = self.dbc.selectPriorityBooster("Tank", id, 1, keystone)[0]["Tank"]
         except:
             tank = ""
         try:
-            healer = self.dbc.selectPriorityBooster("Healer", id, 1)[0]["Healer"]
+            healer = self.dbc.selectPriorityBooster("Healer", id, 1, keystone)[0]["Healer"]
         except:
             healer = ""
-        dps = self.dbc.selectPriorityBooster("Damage", id, 2)
+        dps = self.dbc.selectPriorityBooster("Damage", id, 2, keystone)
         try:
             dpsOne = dps[0]["Damage"]
         except:
@@ -397,16 +413,6 @@ class Generate(commands.Cog):
             dpsTwo = dps[1]["Damage"]
         except:
             dpsTwo = ""
-        try:
-            keystoneQuery = f"""SELECT B.`user` FROM mythicplus.booster B
-                                JOIN mythicplus.keystone K
-                                ON B.`user` = K.`user`
-                                AND B.groupid = K.groupid
-                                WHERE K.groupid = '{id}' AND K.has_keystone = 1 LIMIT 1"""
-            keystone = self.dbc.select(keystoneQuery)
-            keystoneHolder = keystone["user"]
-        except:
-            keystoneHolder = ""
 
         if tank and healer and dpsOne and dpsTwo and keystoneHolder:
             group = [tank, healer, dpsOne, dpsTwo, keystoneHolder]
