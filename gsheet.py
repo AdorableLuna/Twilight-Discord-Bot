@@ -50,9 +50,9 @@ class gsheet(object):
         result = sheet.values().update(
             spreadsheetId=sheetid, range=sheetrange,
             valueInputOption='USER_ENTERED', body=body).execute()
-    def getAllRows(self, sheetid):
+    def getAllRows(self, sheetid, sheetrange):
         # Call the Sheets API
         sheet = self.service.spreadsheets()
         result = sheet.values().get(
-            spreadsheetId=sheetid, range="B12:I").execute()
+            spreadsheetId=sheetid, range=sheetrange).execute()
         return result.get('values', [])

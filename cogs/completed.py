@@ -16,21 +16,23 @@ class Completed(commands.Cog):
     def __init__(self, client):
         self.client = client
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.guild = self.client.get_guild(config["GUILD_ID"])
+        self.channel = self.client.get_channel(731479403862949928)
+
     @commands.command()
-    async def completed(self, ctx):
-        guild = self.client.get_guild(config["GUILD_ID"])
-        channel = ctx.message.channel
-        await channel.send('This run has been processed by our bot.', delete_after=10.0)
+    async def completed(self, ctx, *args):
+        if ctx.message.channel == self.channel:
+            await self.channel.send('This run has been processed by our bot.', delete_after=5.0)
+
         SPREADSHEET_ID = config["SPREADSHEET_ID"]
         RANGE_NAME = 'B12'
         FIELDS = 7
 
-        msg = ctx.message.content[11:]
-        result = [x.strip() for x in re.split(' ', msg)]
-
-        if len(result) == FIELDS:
+        if len(args) == FIELDS:
             print(ctx.message.created_at)
-            DATA = result
+            DATA = args
             pot = DATA[0]
             epot = int(DATA[0])
             potrealm = DATA[1]
@@ -45,11 +47,11 @@ class Completed(commands.Cog):
             booster4 = DATA[6]
             eb4 = DATA[6]
 
-            advertiser = checkName(guild, advertiser)
-            booster1 = checkName(guild, booster1)
-            booster2 = checkName(guild, booster2)
-            booster3 = checkName(guild, booster3)
-            booster4 = checkName(guild, booster4)
+            advertiser = checkName(self.guild, advertiser)
+            booster1 = checkName(self.guild, booster1)
+            booster2 = checkName(self.guild, booster2)
+            booster3 = checkName(self.guild, booster3)
+            booster4 = checkName(self.guild, booster4)
 
             adfee = int(pot) * 0.173
             boosterfee = int(pot) * 0.178
@@ -57,7 +59,7 @@ class Completed(commands.Cog):
 
             TRUEDATA = [epot, potrealm, advertiser, booster1, booster2, booster3, booster4]
 
-            allRows = sheet.getAllRows(SPREADSHEET_ID)
+            allRows = sheet.getAllRows(SPREADSHEET_ID, f"{RANGE_NAME}:I")
             # Count starts at 11, because the first 11 rows are irrelevant
             rowCount = 11
             updated = False
@@ -90,17 +92,24 @@ class Completed(commands.Cog):
             embed.add_field(name="Guild Cut", value=format(int(guildfee),',d'), inline=False)
             embed.add_field(name="Location of the Gold", value=potrealm, inline=False)
             embed.add_field(name="Advertiser", value=eadv, inline=False)
-            await ctx.message.channel.send(embed=embed)
-            await ctx.message.delete()
+            await self.channel.send(embed=embed)
+            if ctx.message.channel == self.channel:
+                await ctx.message.delete()
         else:
             # Needs more/less fields
-            await ctx.message.channel.send(':x: The command you have entered is invalid. Please check the correct formatting in the pins. :x:', delete_after=10.0)
+            await self.channel.send(':x: The command you have entered is invalid. Please check the correct formatting in the pins. :x:', delete_after=10.0)
 
 def checkName(guild, name):
-    if name.startswith('<'):
-        name = name[3:-1]
+    if re.search('^<@[0-9>]+$', name):
+        name = name[2:-1]
+        member = guild.get_member(int(name))
 
-        return guild.get_member(int(name)).nick
+        return guild.get_member(int(name)).name
+    elif re.search('^<@![0-9>]+$', name):
+        name = name[3:-1]
+        member = guild.get_member(int(name))
+
+        return guild.get_member(int(name)).display_name
     else:
         return name
 
