@@ -337,9 +337,6 @@ class Generate(commands.Cog):
             # Cancel
             await msg.add_reaction(self.cancelEmoji)
 
-            # Done
-            await msg.add_reaction(self.doneEmoji)
-
             await ctx.message.delete()
 
         else:
@@ -453,6 +450,13 @@ class Generate(commands.Cog):
         createdMessage = (f"{mentions}\nPlease whisper `/w {advertiser} invite`. See the message above for more details.\n" +
                   f"Group id: {message.id}")
         await message.channel.send(createdMessage)
+
+        reactions = message.reactions
+        for reaction in reactions[:]:
+            await reaction.clear()
+
+        # Done
+        await message.add_reaction(self.doneEmoji)
 
     async def checkRoles(self, channel, data):
         isValid = False
