@@ -38,6 +38,7 @@ class Upgrade(commands.Cog):
 
             if "mythic_plus_scores_by_season" in data:
                 scores = data["mythic_plus_scores_by_season"][0]["scores"]
+                faction = data['faction'].capitalize()
                 allScore = scores["all"]
                 tankScore = scores["tank"]
                 healerScore = scores["healer"]
@@ -47,19 +48,19 @@ class Upgrade(commands.Cog):
                 rareRole = self.getRole("Rare")
                 epicRole = self.getRole("Epic")
                 legendaryRole = self.getRole("Legendary")
-                highKeyRole = self.getRole(f"Highkey Booster {data['faction'].capitalize()}")
+                highKeyRole = self.getRole(f"Highkey Booster {faction}")
                 role = ""
 
                 if rareRole in userRoles and epicRole in userRoles and legendaryRole in userRoles:
                     description = "You already have all the roles."
                 else:
-                    if allScore > 2400:
+                    if allScore > 2400 and faction == "Alliance" or allScore > 2500 and faction == "Horde":
                         role = rareRole
                         await author.add_roles(role)
-                    if allScore > 2700:
+                    if allScore > 2700 and faction == "Alliance" or allScore > 2900 and faction == "Horde":
                         role = epicRole
                         await author.add_roles(role, highKeyRole)
-                    if allScore > 3500:
+                    if allScore > 3500 and faction == "Alliance" or allScore > 3900 and faction == "Horde":
                         role = legendaryRole
                         await author.add_roles(role, highKeyRole)
 
@@ -69,9 +70,9 @@ class Upgrade(commands.Cog):
                         description = "Your character is not yet eligible for any other roles.\n\n"
 
                     description += f"""**Required RaiderIO Score Per Rank:**
-                                   {legendaryRole.mention}: 3500
-                                   {epicRole.mention}: 2700
-                                   {rareRole.mention}: 2400"""
+                                   {legendaryRole.mention}: {"3500" if faction == "Alliance" else "3900"}
+                                   {epicRole.mention}: {"2700" if faction == "Alliance" else "2900"}
+                                   {rareRole.mention}: {"2400" if faction == "Alliance" else "2500"}"""
 
                 embed=discord.Embed(title=f"{data['name']}-{data['realm']}", description=description, color=0x5cf033)
                 embed.set_thumbnail(url=data["thumbnail_url"])
