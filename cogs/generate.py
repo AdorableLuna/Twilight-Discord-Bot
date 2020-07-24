@@ -219,7 +219,7 @@ class Generate(commands.Cog):
             await self.updateGroup(reaction.message)
 
     @commands.command()
-    @commands.has_any_role("Advertiser", "Management", "Council")
+    @commands.has_any_role("Trainee Advertiser", "Advertiser", "Management", "Council")
     async def generate(self, ctx):
         self.ctx = ctx
         msg = ctx.message.content[10:]
