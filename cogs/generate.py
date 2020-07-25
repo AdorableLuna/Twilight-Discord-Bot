@@ -378,16 +378,18 @@ class Generate(commands.Cog):
         id = message.id
 
         try:
-            keystoneQuery = f"""SELECT B.`user`, COUNT(B.`user`) as total FROM mythicplus.booster B
+            keystoneQuery = f"""SELECT B.`user`, B.`role`, COUNT(B.`user`) as total FROM mythicplus.booster B
                                 JOIN mythicplus.keystone K
                                 ON B.`user` = K.`user`
                                 AND B.groupid = K.groupid
                                 WHERE K.groupid = '{id}' AND K.has_keystone = 1 LIMIT 1"""
             keystone = self.dbc.select(keystoneQuery)
             keystoneHolder = "" if keystone["user"] is None else keystone["user"]
+            keystoneRole = keystone["role"]
             totalKeystones = keystone["total"]
         except:
             keystoneHolder = ""
+            keystoneRole = ""
             totalKeystones = 0
 
         keystone = False
@@ -410,6 +412,13 @@ class Generate(commands.Cog):
             dpsTwo = dps[1]["Damage"]
         except:
             dpsTwo = ""
+
+        if keystoneRole == "Tank":
+            tank = keystoneHolder
+        elif keystoneRole == "Healer":
+            healer = keystoneHolder
+        elif keystoneRole == "Damage":
+            dpsTwo = keystoneHolder
 
         if tank and healer and dpsOne and dpsTwo and keystoneHolder:
             group = [tank, healer, dpsOne, dpsTwo, keystoneHolder]
