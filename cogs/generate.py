@@ -418,7 +418,8 @@ class Generate(commands.Cog):
         elif keystoneRole == "Healer":
             healer = keystoneHolder
         elif keystoneRole == "Damage":
-            dpsTwo = keystoneHolder
+            if dpsOne != keystoneHolder:
+                dpsTwo = keystoneHolder
 
         if tank and healer and dpsOne and dpsTwo and keystoneHolder:
             group = [tank, healer, dpsOne, dpsTwo, keystoneHolder]
