@@ -8,6 +8,7 @@ import itertools
 import math
 import locale
 
+from helpers import helper
 from discord.utils import get
 from discord.ext import commands
 from db import dbconnection as dbc
@@ -21,7 +22,17 @@ class Generate(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        self.helper = helper.Helper(self.client)
         self.dbc = dbc.DBConnection()
+        self.guild = self.client.get_guild(config["GUILD_ID"])
+        self.completedChannel = self.client.get_channel(731479403862949928)
+        self.tankEmoji = self.client.get_emoji(714930608266018859)
+        self.healerEmoji = self.client.get_emoji(714930600267612181)
+        self.dpsEmoji = self.client.get_emoji(714930578461425724)
+        self.keystoneEmoji = self.client.get_emoji(715918950092898346)
+        self.teamEmoji = "\U0001F1F9"
+        self.cancelEmoji = "\U0000274C"
+        self.doneEmoji = "\U00002705"
         self.tankRoles = [
             "Druid",
             "Monk",
@@ -45,18 +56,6 @@ class Generate(commands.Cog):
         ]
 
     @commands.Cog.listener()
-    async def on_ready(self):
-        self.guild = self.client.get_guild(config["GUILD_ID"])
-        self.completedChannel = self.client.get_channel(731479403862949928)
-        self.tankEmoji = self.client.get_emoji(714930608266018859)
-        self.healerEmoji = self.client.get_emoji(714930600267612181)
-        self.dpsEmoji = self.client.get_emoji(714930578461425724)
-        self.keystoneEmoji = self.client.get_emoji(715918950092898346)
-        self.teamEmoji = "\U0001F1F9"
-        self.cancelEmoji = "\U0000274C"
-        self.doneEmoji = "\U00002705"
-
-    @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         if self.client.user == user: return
         if "boosts" not in reaction.message.channel.name: return
@@ -65,7 +64,7 @@ class Generate(commands.Cog):
         id = reaction.message.id
         channel = reaction.message.channel
 
-        if self.getRole("M+ Banned") in user.roles:
+        if self.helper.getRole("M+ Banned") in user.roles:
             await channel.send(f"\U0001F6AB {user.mention}, you are currently Mythic+ banned and therefore not allowed to sign up. \U0001F6AB")
             await reaction.remove(user)
             return
@@ -239,14 +238,14 @@ class Generate(commands.Cog):
             armor = result[5]
 
             if result[5] != "Any":
-                if not self.containsRoleMention(result[5]):
-                    armor = self.getRole(result[5]).mention
+                if not self.helper.containsRoleMention(result[5]):
+                    armor = self.helper.getRole(result[5]).mention
 
             advertiserNote = ""
             additionalRoles = []
             if keystoneLevel < 18:
                 for x in range(6, len(result)):
-                    if self.containsRoleMention(result[x]):
+                    if self.helper.containsRoleMention(result[x]):
                         mentions += result[x] + " "
                         additionalRoles.append(result[x])
                     else:
@@ -255,7 +254,7 @@ class Generate(commands.Cog):
             if not additionalRoles:
                 if keystoneLevel < 18 and result[5] != "Any":
                     if result[5] == "Cloth" or result[5] == "Mail":
-                        tankRole = self.getRole("Tank").mention
+                        tankRole = self.helper.getRole("Tank").mention
                         mentions += tankRole + " "
 
                     mentions += armor + " "
@@ -263,22 +262,22 @@ class Generate(commands.Cog):
                     armor = "Any"
 
                     if keystoneLevel >= 18:
-                        keystoneRole = self.getRole("Legendary").mention
+                        keystoneRole = self.helper.getRole("Legendary").mention
                         mentions += keystoneRole + " "
                     else:
                         if keystoneLevel >= 15 and keystoneLevel < 18:
                             if faction == "Horde":
-                                keystoneRole = self.getRole("Highkey Booster Horde").mention
+                                keystoneRole = self.helper.getRole("Highkey Booster Horde").mention
                             elif faction == "Alliance":
-                                keystoneRole = self.getRole("Highkey Booster Alliance").mention
+                                keystoneRole = self.helper.getRole("Highkey Booster Alliance").mention
                             mentions += keystoneRole + " "
                         elif keystoneLevel >= 10 and keystoneLevel <= 14:
-                            keystoneRole = self.getRole("Mplus Booster").mention
+                            keystoneRole = self.helper.getRole("Mplus Booster").mention
                             mentions += keystoneRole + " "
 
-                        tankRole = self.getRole("Tank").mention
-                        healerRole = self.getRole("Healer").mention
-                        damageRole = self.getRole("Damage").mention
+                        tankRole = self.helper.getRole("Tank").mention
+                        healerRole = self.helper.getRole("Healer").mention
+                        damageRole = self.helper.getRole("Damage").mention
                         mentions += tankRole + " " + healerRole + " " + damageRole + " "
 
             advertiser = f"{ctx.message.author.mention} ({result[0]})"
@@ -474,18 +473,18 @@ class Generate(commands.Cog):
 
         if keystoneLevel >= 15:
             if data["faction"] == "Horde":
-                factionRole = self.getRole("Highkey Booster Horde")
+                factionRole = self.helper.getRole("Highkey Booster Horde")
             elif data["faction"] == "Alliance":
-                factionRole = self.getRole("Highkey Booster Alliance")
+                factionRole = self.helper.getRole("Highkey Booster Alliance")
         else:
-            factionRole = self.getRole("Mplus Booster")
+            factionRole = self.helper.getRole("Mplus Booster")
 
         if keystoneLevel >= 18:
-            keystoneRole = self.getRole("Legendary")
+            keystoneRole = self.helper.getRole("Legendary")
         if keystoneLevel <= 17:
-            keystoneRole = self.getRole("Epic")
+            keystoneRole = self.helper.getRole("Epic")
         if keystoneLevel <= 14:
-            keystoneRole = self.getRole("Rare")
+            keystoneRole = self.helper.getRole("Rare")
 
         userRoles = data["user"].roles
 
@@ -493,7 +492,7 @@ class Generate(commands.Cog):
             allRoles = ""
 
             for additionalRole in data["additional_roles"]:
-                additionalRole = self.getRoleById(additionalRole["role"])
+                additionalRole = self.helper.getRoleById(additionalRole["role"])
                 allRoles += f"`{additionalRole}`, "
                 isAllowedRole = False
 
@@ -526,7 +525,7 @@ class Generate(commands.Cog):
             return False
 
         if data["role"] != "Any" and data["role"] != "All":
-            role = self.getRole(data["role"])
+            role = self.helper.getRole(data["role"])
             if role in userRoles:
                 isValid = True
             else:
@@ -534,7 +533,7 @@ class Generate(commands.Cog):
                 return False
 
         if data["armor_type"] != "Any":
-            armorRole = self.getRoleById(data["armor_type"])
+            armorRole = self.helper.getRoleById(data["armor_type"])
             isAllowedRole = False
 
             if str(armorRole) not in self.tankRoles and data["role"] == "Tank":
@@ -551,7 +550,7 @@ class Generate(commands.Cog):
                     return False
 
         if "team" in data:
-            teamRole = self.getRole("M+ TEAM LEADER")
+            teamRole = self.helper.getRole("M+ TEAM LEADER")
             if teamRole in userRoles:
                 isValid = True
             else:
@@ -559,16 +558,6 @@ class Generate(commands.Cog):
                 return False
 
         return isValid
-
-    def getRole(self, role):
-        return discord.utils.find(lambda r: r.name == role, self.guild.roles)
-
-    def getRoleById(self, role):
-        role = re.sub('[<@&>]', '', role)
-        return discord.utils.find(lambda r: r.id == int(role), self.guild.roles)
-
-    def containsRoleMention(self, string):
-        return re.search('(?=.*<)(?=.*@)(?=.*&)(?=.*>)', string)
 
 def setup(client):
     client.add_cog(Generate(client))
