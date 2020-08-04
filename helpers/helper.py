@@ -33,5 +33,5 @@ class Helper(object):
         role = re.sub('[<@&>]', '', role)
         return discord.utils.find(lambda r: r.id == int(role), self.guild.roles)
 
-    def containsRoleMention(string):
+    def containsRoleMention(self, string):
         return re.search('(?=.*<)(?=.*@)(?=.*&)(?=.*>)', string)
