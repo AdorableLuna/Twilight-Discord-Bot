@@ -2,6 +2,7 @@ import discord
 import requests
 import json
 
+from helpers import helper
 from discord.utils import get
 from discord.ext import commands
 
@@ -12,9 +13,7 @@ class Upgrade(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-
-    @commands.Cog.listener()
-    async def on_ready(self):
+        self.helper = helper.Helper(self.client)
         self.guild = self.client.get_guild(config["GUILD_ID"])
         self.channelID = 728967077381275658
         self.tankEmoji = self.client.get_emoji(714930608266018859)
@@ -45,10 +44,10 @@ class Upgrade(commands.Cog):
                 dpsScore = scores["dps"]
 
                 userRoles = author.roles
-                rareRole = self.getRole("Rare")
-                epicRole = self.getRole("Epic")
-                legendaryRole = self.getRole("Legendary")
-                highKeyRole = self.getRole(f"Highkey Booster {faction}")
+                rareRole = self.helper.getRole("Rare")
+                epicRole = self.helper.getRole("Epic")
+                legendaryRole = self.helper.getRole("Legendary")
+                highKeyRole = self.helper.getRole(f"Highkey Booster {faction}")
                 role = ""
 
                 if rareRole in userRoles and epicRole in userRoles and legendaryRole in userRoles:
@@ -83,9 +82,6 @@ class Upgrade(commands.Cog):
                 await ctx.message.channel.send(embed=embed)
         else:
             await ctx.message.channel.send("Could not retrieve Raider.IO character. Make sure the name-realm is correct and exists.")
-
-    def getRole(self, role):
-        return discord.utils.find(lambda r: r.name == role, self.guild.roles)
 
 def setup(client):
     client.add_cog(Upgrade(client))

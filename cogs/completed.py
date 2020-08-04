@@ -2,6 +2,7 @@ import discord
 import json
 import re
 
+from helpers import helper
 from discord.utils import get
 from discord.ext import commands
 from gsheet import *
@@ -15,9 +16,7 @@ class Completed(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-
-    @commands.Cog.listener()
-    async def on_ready(self):
+        self.helper = helper.Helper(self.client)
         self.guild = self.client.get_guild(config["GUILD_ID"])
         self.channel = self.client.get_channel(731479403862949928)
 
@@ -47,11 +46,11 @@ class Completed(commands.Cog):
             booster4 = DATA[6]
             eb4 = DATA[6]
 
-            advertiser = checkName(self.guild, advertiser)
-            booster1 = checkName(self.guild, booster1)
-            booster2 = checkName(self.guild, booster2)
-            booster3 = checkName(self.guild, booster3)
-            booster4 = checkName(self.guild, booster4)
+            advertiser = self.helper.checkName(advertiser)
+            booster1 = self.helper.checkName(booster1)
+            booster2 = self.helper.checkName(booster2)
+            booster3 = self.helper.checkName(booster3)
+            booster4 = self.helper.checkName(booster4)
 
             adfee = int(pot) * 0.173
             boosterfee = int(pot) * 0.178
@@ -98,20 +97,6 @@ class Completed(commands.Cog):
         else:
             # Needs more/less fields
             await self.channel.send(':x: The command you have entered is invalid. Please check the correct formatting in the pins. :x:', delete_after=10.0)
-
-def checkName(guild, name):
-    if re.search('^<@[0-9>]+$', name):
-        name = name[2:-1]
-        member = guild.get_member(int(name))
-
-        return guild.get_member(int(name)).name
-    elif re.search('^<@![0-9>]+$', name):
-        name = name[3:-1]
-        member = guild.get_member(int(name))
-
-        return guild.get_member(int(name)).display_name
-    else:
-        return name
 
 def setup(client):
     client.add_cog(Completed(client))

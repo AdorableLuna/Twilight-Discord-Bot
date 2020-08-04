@@ -12,9 +12,6 @@ class Voicechannel(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-
-    @commands.Cog.listener()
-    async def on_ready(self):
         self.guild = self.client.get_guild(config["GUILD_ID"])
 
     @commands.command(aliases=['vc'])
