@@ -93,5 +93,7 @@ class Applications(commands.Cog):
         await message.add_reaction(self.rareEmoji)
         await message.add_reaction(self.declineEmoji)
 
+        await self.client.process_commands(message)
+
 def setup(client):
     client.add_cog(Applications(client))
