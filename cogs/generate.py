@@ -56,17 +56,20 @@ class Generate(commands.Cog):
         ]
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        if self.client.user == user: return
-        if "boosts" not in reaction.message.channel.name: return
-        if not reaction.message.embeds: return
+    async def on_raw_reaction_add(self, payload):
+        if self.client.user == payload.member: return
+        user = payload.member
+        channel = self.client.get_channel(payload.channel_id)
 
-        id = reaction.message.id
-        channel = reaction.message.channel
+        if "boosts" not in channel.name: return
+        message = await channel.fetch_message(payload.message_id)
+
+        if not message.embeds: return
+        id = message.id
 
         if self.helper.getRole("M+ Banned") in user.roles:
             await channel.send(f"\U0001F6AB {user.mention}, you are currently Mythic+ banned and therefore not allowed to sign up. \U0001F6AB")
-            await reaction.remove(user)
+            await message.remove_reaction(payload.emoji, user)
             return
 
         groupQuery = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
@@ -77,7 +80,7 @@ class Generate(commands.Cog):
         author = author.split(" ", 1)[0]
 
         if group["created"]:
-            if str(reaction.emoji) == str(self.doneEmoji) and user.mention == author:
+            if str(payload.emoji) == str(self.doneEmoji) and user.mention == author:
                 gold_pot = group["gold_pot"]
                 if "k" in gold_pot:
                     gold_pot = gold_pot.replace('k', '')
@@ -85,7 +88,7 @@ class Generate(commands.Cog):
 
                 usernameRegex = "<@.*?>"
                 nicknameRegex = "<@!.*?>"
-                party = re.compile("(%s|%s)" % (usernameRegex, nicknameRegex)).findall(reaction.message.embeds[0].description)
+                party = re.compile("(%s|%s)" % (usernameRegex, nicknameRegex)).findall(message.embeds[0].description)
                 await self.ctx.invoke(self.client.get_command('completed'), gold_pot, group['payment_realm'], author, party[0], party[1], party[2], party[3])
 
             return
@@ -93,38 +96,38 @@ class Generate(commands.Cog):
         additionalRolesQuery = f"SELECT `role` FROM mythicplus.group_additional_roles WHERE groupid = '{id}'"
         group["additional_roles"] = self.dbc.select(additionalRolesQuery, True)
 
-        if str(reaction.emoji) == str(self.tankEmoji):
+        if str(payload.emoji) == str(self.tankEmoji):
             data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Tank", "additional_roles": group["additional_roles"]}
             if not await self.checkRoles(channel, data):
-                await reaction.remove(user)
+                await message.remove_reaction(payload.emoji, user)
                 return
 
             role = "Tank"
 
-        if str(reaction.emoji) == str(self.healerEmoji):
+        if str(payload.emoji) == str(self.healerEmoji):
             data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Healer", "additional_roles": group["additional_roles"]}
             if not await self.checkRoles(channel, data):
-                await reaction.remove(user)
+                await message.remove_reaction(payload.emoji, user)
                 return
 
             role = "Healer"
 
-        if str(reaction.emoji) == str(self.dpsEmoji):
+        if str(payload.emoji) == str(self.dpsEmoji):
             data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "Damage", "additional_roles": group["additional_roles"]}
             if not await self.checkRoles(channel, data):
-                await reaction.remove(user)
+                await message.remove_reaction(payload.emoji, user)
                 return
 
             role = "Damage"
 
-        if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji):
+        if str(payload.emoji) == str(self.tankEmoji) or str(payload.emoji) == str(self.healerEmoji) or str(payload.emoji) == str(self.dpsEmoji):
             query = f"""INSERT INTO mythicplus.booster (groupid, `user`, `role`)
                        SELECT '{id}', '{user.mention}', '{role}' FROM DUAL
                        WHERE NOT EXISTS (SELECT groupid, `user` FROM mythicplus.booster
                                 WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
             self.dbc.insert(query)
 
-        if str(reaction.emoji) == str(self.keystoneEmoji):
+        if str(payload.emoji) == str(self.keystoneEmoji):
             existsQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
             existsInBooster = self.dbc.select(existsQuery)
             if existsInBooster["result"]:
@@ -134,17 +137,17 @@ class Generate(commands.Cog):
                                     WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
                 self.dbc.insert(query)
             else:
-                await reaction.remove(user)
+                await message.remove_reaction(payload.emoji, user)
                 await channel.send(f"{user.mention}, assign yourself a role before marking yourself as a keystone holder.")
                 return
 
-        if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji) or str(reaction.emoji) == str(self.keystoneEmoji):
-            await self.updateGroup(reaction.message)
+        if str(payload.emoji) == str(self.tankEmoji) or str(payload.emoji) == str(self.healerEmoji) or str(payload.emoji) == str(self.dpsEmoji) or str(payload.emoji) == str(self.keystoneEmoji):
+            await self.updateGroup(message)
 
-        if str(reaction.emoji) == str(self.teamEmoji):
+        if str(payload.emoji) == str(self.teamEmoji):
             data = {"user": user, "faction": group["faction"], "armor_type": group["armor_type"], "keystone_level": group["keystone_level"], "role": "All", "team": True, "additional_roles": group["additional_roles"]}
             if not await self.checkRoles(channel, data):
-                await reaction.remove(user)
+                await message.remove_reaction(payload.emoji, user)
                 return
 
             existsInBoosterQuery = f"SELECT EXISTS(SELECT 1 FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}') as 'result'"
@@ -177,45 +180,49 @@ class Generate(commands.Cog):
                 self.dbc.insert(query, value)
 
             group = [user.mention, user.mention, user.mention, user.mention, user.mention]
-            await self.createGroup(reaction.message, group, team=True)
+            await self.createGroup(message, group, team=True)
             return
 
-        if str(reaction.emoji) == str(self.cancelEmoji):
+        if str(payload.emoji) == str(self.cancelEmoji):
             if user.mention == author:
-                await reaction.message.delete() #TODO: remove from database?
-                await self.cancelGroup(reaction.message)
+                await message.delete() #TODO: remove from database?
+                await self.cancelGroup(message)
 
     @commands.Cog.listener()
-    async def on_reaction_remove(self, reaction, user):
+    async def on_raw_reaction_remove(self, payload):
+        user = self.guild.get_member(payload.user_id)
         if self.client.user == user: return
-        if "boosts" not in reaction.message.channel.name: return
-        if not reaction.message.embeds: return
-        id = reaction.message.id
-        channel = reaction.message.channel
+        channel = self.client.get_channel(payload.channel_id)
+
+        if "boosts" not in channel.name: return
+        message = await channel.fetch_message(payload.message_id)
+
+        if not message.embeds: return
+        id = message.id
 
         query = f"SELECT * FROM mythicplus.group WHERE id = '{id}'"
         group = self.dbc.select(query)
         if group is None or group["created"]: return
 
-        if str(reaction.emoji) == str(self.tankEmoji):
+        if str(payload.emoji) == str(self.tankEmoji):
             role = "Tank"
 
-        if str(reaction.emoji) == str(self.healerEmoji):
+        if str(payload.emoji) == str(self.healerEmoji):
             role = "Healer"
 
-        if str(reaction.emoji) == str(self.dpsEmoji):
+        if str(payload.emoji) == str(self.dpsEmoji):
             role = "Damage"
 
-        if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji):
+        if str(payload.emoji) == str(self.tankEmoji) or str(payload.emoji) == str(self.healerEmoji) or str(payload.emoji) == str(self.dpsEmoji):
             query = f"""DELETE FROM mythicplus.booster WHERE groupid = '{id}' AND user = '{user.mention}' AND role = '{role}'"""
             self.dbc.delete(query)
 
-        if str(reaction.emoji) == str(self.keystoneEmoji):
+        if str(payload.emoji) == str(self.keystoneEmoji):
             query = f"""DELETE FROM mythicplus.keystone WHERE groupid = '{id}' AND user = '{user.mention}'"""
             self.dbc.delete(query)
 
-        if str(reaction.emoji) == str(self.tankEmoji) or str(reaction.emoji) == str(self.healerEmoji) or str(reaction.emoji) == str(self.dpsEmoji) or str(reaction.emoji) == str(self.keystoneEmoji):
-            await self.updateGroup(reaction.message)
+        if str(payload.emoji) == str(self.tankEmoji) or str(payload.emoji) == str(self.healerEmoji) or str(payload.emoji) == str(self.dpsEmoji) or str(payload.emoji) == str(self.keystoneEmoji):
+            await self.updateGroup(message)
 
     @commands.command()
     @commands.has_any_role("Trainee Advertiser", "Advertiser", "Management", "Council")

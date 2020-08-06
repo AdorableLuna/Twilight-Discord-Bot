@@ -22,18 +22,18 @@ class Applications(commands.Cog):
         self.twilightEmoji = self.client.get_emoji(740282389682454540)
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        if self.client.user == user: return
-        if reaction.message.channel.id != self.hordeChannelID and reaction.message.channel.id != self.allianceChannelID: return
-        channel = reaction.message.channel.name
+    async def on_raw_reaction_add(self, payload):
+        if self.client.user == payload.member: return
+        if payload.channel_id != self.hordeChannelID and payload.channel_id != self.allianceChannelID: return
+        channel = self.client.get_channel(payload.channel_id)
 
-        if "horde" in channel:
+        if "horde" in channel.name:
             faction = "Horde"
-        elif "alliance" in channel:
+        elif "alliance" in channel.name:
             faction = "Alliance"
 
-        author = reaction.message.author
-        userRoles = user.roles
+        message = await channel.fetch_message(payload.message_id)
+        userRoles = payload.member.roles
         councilRole = self.helper.getRole("Council")
         legendaryRole = self.helper.getRole("Legendary")
         epicRole = self.helper.getRole("Epic")
@@ -44,9 +44,9 @@ class Applications(commands.Cog):
         boosteeRole = self.helper.getRole("Twilight Boostee")
 
         if councilRole in userRoles:
-            if str(reaction.emoji) == str(self.legendaryEmoji) or str(reaction.emoji) == str(self.epicEmoji) or str(reaction.emoji) == str(self.rareEmoji):
-                await author.remove_roles(boosteeRole)
-                await author.add_roles(mplusBoosterRole, mplusBoosterFactionRole)
+            if str(payload.emoji) == str(self.legendaryEmoji) or str(payload.emoji) == str(self.epicEmoji) or str(payload.emoji) == str(self.rareEmoji):
+                await message.author.remove_roles(boosteeRole)
+                await message.author.add_roles(mplusBoosterRole, mplusBoosterFactionRole)
 
                 acceptedMessage = (f"{self.twilightEmoji} **Welcome to Twilight!** {self.twilightEmoji}\n\n"
 
@@ -64,23 +64,23 @@ class Applications(commands.Cog):
 
                 "Happy boosting!")
 
-                if str(reaction.emoji) == str(self.legendaryEmoji):
-                    await author.add_roles(rareRole, epicRole, legendaryRole, highKeyRole)
+                if str(payload.emoji) == str(self.legendaryEmoji):
+                    await message.author.add_roles(rareRole, epicRole, legendaryRole, highKeyRole)
 
-                if str(reaction.emoji) == str(self.epicEmoji):
-                    await author.add_roles(rareRole, epicRole, highKeyRole)
+                if str(payload.emoji) == str(self.epicEmoji):
+                    await message.author.add_roles(rareRole, epicRole, highKeyRole)
 
-                if str(reaction.emoji) == str(self.rareEmoji):
-                    await author.add_roles(rareRole)
+                if str(payload.emoji) == str(self.rareEmoji):
+                    await message.author.add_roles(rareRole)
 
-                await author.send(acceptedMessage)
+                await message.author.send(acceptedMessage)
 
-            if str(reaction.emoji) == str(self.declineEmoji):
+            if str(payload.emoji) == str(self.declineEmoji):
                 declineMessage = ("Unfortunately after processing your application, we've come to the decision that you're not suitable to boost Mythic Plus with the <Twilight Community>.\n\n"
 
                 "Feel free to apply again once you meet the requirements. Contact anyone from management or simply open a support ticket for further inquiries.")
 
-                await author.send(declineMessage)
+                await message.author.send(declineMessage)
 
     @commands.Cog.listener()
     async def on_message(self, message):
