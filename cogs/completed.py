@@ -91,9 +91,11 @@ class Completed(commands.Cog):
             embed.add_field(name="Guild Cut", value=format(int(guildfee),',d'), inline=False)
             embed.add_field(name="Location of the Gold", value=potrealm, inline=False)
             embed.add_field(name="Advertiser", value=eadv, inline=False)
-            await self.channel.send(embed=embed)
+            msg = await self.channel.send(embed=embed)
             if ctx.message.channel == self.channel:
                 await ctx.message.delete()
+
+            return msg
         else:
             # Needs more/less fields
             await self.channel.send(':x: The command you have entered is invalid. Please check the correct formatting in the pins. :x:', delete_after=10.0)

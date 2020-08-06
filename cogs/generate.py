@@ -89,7 +89,16 @@ class Generate(commands.Cog):
                 usernameRegex = "<@.*?>"
                 nicknameRegex = "<@!.*?>"
                 party = re.compile("(%s|%s)" % (usernameRegex, nicknameRegex)).findall(message.embeds[0].description)
-                await self.ctx.invoke(self.client.get_command('completed'), gold_pot, group['payment_realm'], author, party[0], party[1], party[2], party[3])
+                result = await self.ctx.invoke(self.client.get_command('completed'), gold_pot, group['payment_realm'], author, party[0], party[1], party[2], party[3])
+
+                if result:
+                    await channel.send(f"{self.doneEmoji} Succesfully added the Mythic+ run to the sheets!\n"
+                                       f"Group id: {id}\n"
+                                       f"{result.jump_url}")
+
+                else:
+                    await channel.send(f"{self.cancelEmoji} Something went wrong when trying to add the Mythic+ run to the sheets. Please add it manually in {self.completedChannel.mention}\n"
+                                       f"Group id: {id}")
 
             return
 
