@@ -297,6 +297,8 @@ class Generate(commands.Cog):
                         mentions += tankRole + " " + healerRole + " " + damageRole + " "
 
             advertiser = f"{ctx.message.author.mention} ({result[0]})"
+            result[3] = result[3].lower()
+
             if "k" in result[3]:
                 goldPot = result[3].replace('k', '')
                 goldPot = str(goldPot) + "000"
