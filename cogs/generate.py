@@ -91,7 +91,7 @@ class Generate(commands.Cog):
                 party = re.compile("(%s|%s)" % (usernameRegex, nicknameRegex)).findall(message.embeds[0].description)
 
                 ctx = await self.client.get_context(message)
-                result = await ctx.invoke(self.client.get_command('completed'), gold_pot, group['payment_realm'], author, party[0], party[1], party[2], party[3])
+                result = await ctx.invoke(self.client.get_command('completed'), 'M+', gold_pot, group['payment_realm'], author, party[0], party[1], party[2], party[3])
 
                 if result:
                     await channel.send(f"{self.doneEmoji} Succesfully added the Mythic+ run to the sheets!\n"
