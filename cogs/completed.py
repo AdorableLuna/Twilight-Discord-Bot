@@ -178,5 +178,12 @@ class Completed(commands.Cog):
 
         return msg
 
+    @completed.error
+    async def completed_error(self, ctx, error):
+        await self.channel.send(f'{ctx.message.author.mention}, there was an error with your command. Please check the pins for the correct format.')
+        print(".completed:", error)
+
+        return
+
 def setup(client):
     client.add_cog(Completed(client))
