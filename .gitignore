@@ -140,3 +140,4 @@ cython_debug/
 config.json
 credentials.json
 token.pickle
+secret.key
