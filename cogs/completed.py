@@ -129,7 +129,7 @@ class Completed(commands.Cog):
         if type == 'M+':
             TRUEDATA = [epot, potrealm, advertiser, booster1, booster2, booster3, booster4]
         else:
-            TRUEDATA = [type, epot, potrealm, advertiser, booster1, booster2, booster3, booster4]
+            TRUEDATA = [type, epot, potrealm, advertiser, booster1, booster2, booster3, booster4, adfee, boosterfee]
 
         allRows = sheet.getAllRows(SPREADSHEET_ID, f"{RANGE_NAME}")
         # Count starts at 11 or 2, because the first 11 or 2 rows are irrelevant
