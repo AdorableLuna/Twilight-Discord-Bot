@@ -42,6 +42,7 @@ class Balance(commands.Cog):
                 await author.send(embed=balanceEmbed)
                 return
 
+        print(f"Couldn't retrieve balance of {author.display_name}", type(author.display_name))
         await author.send("Your balance could not be retrieved. Please message someone from Council or Management.")
 
 def setup(client):
