@@ -1,5 +1,6 @@
 import discord
 import os.path
+import re
 
 from cryptography.fernet import Fernet
 from discord.ext import commands
@@ -8,6 +9,7 @@ class Cryptography(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        self.encryptionChannelID = 741460284887269401
 
         if not os.path.exists('secret.key'):
             self.generate_key()
@@ -43,18 +45,26 @@ class Cryptography(commands.Cog):
             return
 
     @commands.command(aliases=['dec'])
-    @commands.has_any_role("Staff", "Management", "Council")
     async def decrypt(self, ctx):
         """
         Decrypts a message
         """
+        if isinstance(ctx.message.channel, discord.DMChannel): return
+        if ctx.message.channel.id != self.encryptionChannelID: return
 
         key = self.load_key()
         f = Fernet(key)
-        encrypted_message = ctx.message.content.split(" ", 1)[1].encode()
-        decrypted_message  = f.decrypt(encrypted_message)
+        content = re.split(r'[\n ]', ctx.message.content)
+        content.pop(0)
 
-        await ctx.message.channel.send(decrypted_message.decode())
+        decoded_message = ""
+
+        for message in content:
+            encrypted_message = message.encode()
+            decrypted_message = f.decrypt(encrypted_message)
+            decoded_message += decrypted_message.decode() + "\n"
+
+        await ctx.message.channel.send(decoded_message)
         return
 
 def setup(client):
