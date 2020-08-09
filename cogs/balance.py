@@ -30,6 +30,7 @@ class Balance(commands.Cog):
         allRows = sheet.getAllRows(SPREADSHEET_ID, "'Booster payments'!C13:D")
 
         for i in range(len(allRows)):
+            if not allRows[i]: continue
             if allRows[i][0] == author.display_name:
                 try:
                     balance = allRows[i][1]
