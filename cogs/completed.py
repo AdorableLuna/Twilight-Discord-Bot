@@ -93,6 +93,10 @@ class Completed(commands.Cog):
         booster1 = DATA[4]
         eb1 = DATA[4]
         totalBoosters = 1
+
+        if self.helper.containsUserMention(potrealm):
+            raise commands.BadArgument("Realm is not defined.")
+
         try:
             booster2 = DATA[5]
             eb2 = DATA[5]
