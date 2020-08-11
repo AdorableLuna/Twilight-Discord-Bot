@@ -73,6 +73,12 @@ class Applications(commands.Cog):
                 if str(payload.emoji) == str(self.rareEmoji):
                     await message.author.add_roles(rareRole)
 
+                nameRealm = message.content.splitlines()[0].split(" ")[1].split("-")
+                name = nameRealm[0].title()
+                realm = nameRealm[1].title()
+                display_name = f"{name}-{realm} [{'H' if faction == 'Horde' else 'A'}]"
+
+                await message.author.edit(nick=display_name)
                 await message.author.send(acceptedMessage)
 
             if str(payload.emoji) == str(self.declineEmoji):
@@ -87,6 +93,15 @@ class Applications(commands.Cog):
         if isinstance(message.channel, discord.DMChannel): return
         if self.client.user == message.author: return
         if message.channel.id != self.hordeChannelID and message.channel.id != self.allianceChannelID: return
+
+        try:
+            nameRealm = message.content.splitlines()[0].split(" ")[1].split("-")
+            name = nameRealm[0].title()
+            realm = nameRealm[1].title()
+        except:
+            await message.author.send(f"Please use the correct format given in the pins when trying to apply.")
+            await message.delete()
+            return
 
         await message.add_reaction(self.legendaryEmoji)
         await message.add_reaction(self.epicEmoji)
