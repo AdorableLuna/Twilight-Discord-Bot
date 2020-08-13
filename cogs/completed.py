@@ -3,6 +3,8 @@ import json
 
 from helpers import helper
 from discord.ext import commands
+from datetime import datetime
+from pytz import timezone
 from gsheet import *
 
 with open('./config.json', 'r') as cjson:
@@ -65,7 +67,7 @@ class Completed(commands.Cog):
         if ctx.message.channel == self.channel:
             await self.channel.send('This boost has been processed by our bot.', delete_after=5.0)
 
-        print(ctx.message.created_at)
+        created_at = datetime.now(timezone('Europe/Paris')).strftime("%d-%m %H:%M:%S")
         DATA = args
         if DATA[0].islower():
             type = DATA[0].title()
@@ -74,9 +76,9 @@ class Completed(commands.Cog):
 
         SPREADSHEET_ID = config["SPREADSHEET_ID"]
         if type == 'M+':
-            RANGE_NAME = "'Completed M+ Logs'!B12:I"
+            RANGE_NAME = "'Completed M+ Logs'!A12:K"
         else:
-            RANGE_NAME = "'MISC'!B3:I"
+            RANGE_NAME = "'MISC'!A3:N"
 
         pot = DATA[1].lower()
 
@@ -87,7 +89,13 @@ class Completed(commands.Cog):
             pot = DATA[1]
         epot = int(pot)
 
-        potrealm = DATA[2]
+        realmFaction = DATA[2].split("-", 1)
+        try:
+            potrealm = realmFaction[0]
+            faction = "Horde" if realmFaction[1].lower() == 'h' else 'Alliance'
+        except:
+            raise commands.BadArgument("Realm or faction is not defined.")
+
         advertiser = DATA[3]
         eadv = DATA[3]
         booster1 = DATA[4]
@@ -131,11 +139,37 @@ class Completed(commands.Cog):
         type = type.replace('_', ' ')
 
         if type == 'M+':
-            TRUEDATA = [epot, potrealm, advertiser, booster1, booster2, booster3, booster4]
+            TRUEDATA = [epot, potrealm, faction, advertiser, booster1, booster2, booster3, booster4, created_at]
         else:
-            TRUEDATA = [type, epot, potrealm, advertiser, booster1, booster2, booster3, booster4, adfee, boosterfee]
+            TRUEDATA = [epot, potrealm, faction, type, advertiser, booster1, booster2, booster3, booster4, adfee, boosterfee, created_at]
 
         allRows = sheet.getAllRows(SPREADSHEET_ID, f"{RANGE_NAME}")
+
+        embed = discord.Embed(title=f"{type} Completed!", color=0x00ff00)
+        embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
+        embed.add_field(name="Type", value=type, inline=False)
+        embed.add_field(name="Booster 1", value=eb1, inline=False)
+        if booster2:
+            embed.add_field(name="Booster 2", value=eb2, inline=False)
+        if booster3:
+            embed.add_field(name="Booster 3", value=eb3, inline=False)
+        if booster4:
+            embed.add_field(name="Booster 4", value=eb4, inline=False)
+        embed.add_field(name="Gold Pot", value=format(epot,',d'), inline=False)
+        embed.add_field(name="Booster Cut", value=format(int(boosterfee),',d'), inline=False)
+        embed.add_field(name="Advertiser Cut", value=format(int(adfee),',d'), inline=False)
+        embed.add_field(name="Guild Cut", value=format(int(guildfee),',d'), inline=False)
+        embed.add_field(name="Location of the Gold", value=potrealm, inline=False)
+        embed.add_field(name="Faction", value=faction, inline=False)
+        embed.add_field(name="Advertiser", value=eadv, inline=False)
+        msg = await self.channel.send(embed=embed)
+        embed.set_footer(text=f"Run id: {msg.id}.")
+        await msg.edit(embed=embed)
+        if ctx.message.channel == self.channel:
+            await ctx.message.delete()
+
+        TRUEDATA.insert(0, str(msg.id))
+
         # Count starts at 11 or 2, because the first 11 or 2 rows are irrelevant
         rowCount = 11 if type == 'M+' else 2
         updated = False
@@ -144,12 +178,17 @@ class Completed(commands.Cog):
         for i in range(len(allRows)):
             rowCount += 1
 
+            if type == 'M+':
+                UPDATE_RANGE = f"'Completed M+ Logs'!A{rowCount}"
+                emptyRow = (not allRows[i] or not allRows[i][0] and not allRows[i][1] and not allRows[i][2] and not allRows[i][3] and not allRows[i][4] and not allRows[i][5]
+                    and not allRows[i][6] and not allRows[i][7] and not allRows[i][8] and not allRows[i][9])
+            else:
+                UPDATE_RANGE = f"'MISC'!A{rowCount}"
+                emptyRow = (not allRows[i] or not allRows[i][0] and not allRows[i][1] and not allRows[i][2] and not allRows[i][3] and not allRows[i][4] and not allRows[i][5]
+                    and not allRows[i][6] and not allRows[i][7] and not allRows[i][8] and not allRows[i][9] and not allRows[i][10] and not allRows[i][11] and not allRows[i][12])
+
             # If the encountered row is completely empty, but does have a checkmark
-            if not allRows[i] or not allRows[i][0] and not allRows[i][1] and not allRows[i][2] and not allRows[i][3] and not allRows[i][4] and not allRows[i][5] and not allRows[i][6]:
-                if type == 'M+':
-                    UPDATE_RANGE = f"'Completed M+ Logs'!B{rowCount}"
-                else:
-                    UPDATE_RANGE = f"'MISC'!B{rowCount}"
+            if emptyRow:
 
                 # Update that row
                 sheet.update(SPREADSHEET_ID, UPDATE_RANGE, TRUEDATA)
@@ -159,26 +198,6 @@ class Completed(commands.Cog):
         # If no rows were updated, then add it
         if not updated:
             sheet.add(SPREADSHEET_ID, RANGE_NAME, TRUEDATA)
-
-        embed = discord.Embed(title=f"{type} Completed!", color=0x00ff00)
-        embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
-        embed.add_field(name="Type", value=type, inline=False)
-        embed.add_field(name="Booster1", value=eb1, inline=False)
-        if booster2:
-            embed.add_field(name="Booster2", value=eb2, inline=False)
-        if booster3:
-            embed.add_field(name="Booster3", value=eb3, inline=False)
-        if booster4:
-            embed.add_field(name="Booster4", value=eb4, inline=False)
-        embed.add_field(name="Gold Pot", value=format(epot,',d'), inline=False)
-        embed.add_field(name="Booster Cut", value=format(int(boosterfee),',d'), inline=False)
-        embed.add_field(name="Advertiser Cut", value=format(int(adfee),',d'), inline=False)
-        embed.add_field(name="Guild Cut", value=format(int(guildfee),',d'), inline=False)
-        embed.add_field(name="Location of the Gold", value=potrealm, inline=False)
-        embed.add_field(name="Advertiser", value=eadv, inline=False)
-        msg = await self.channel.send(embed=embed)
-        if ctx.message.channel == self.channel:
-            await ctx.message.delete()
 
         return msg
 

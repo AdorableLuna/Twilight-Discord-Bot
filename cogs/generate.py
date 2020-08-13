@@ -81,6 +81,11 @@ class Generate(commands.Cog):
 
         if group["created"]:
             if str(payload.emoji) == str(self.doneEmoji) and user.mention == author:
+                if "horde" in channel.name:
+                    faction = "H"
+                elif "alliance" in channel.name:
+                    faction = "A"
+
                 gold_pot = group["gold_pot"]
                 if "k" in gold_pot:
                     gold_pot = gold_pot.replace('k', '')
@@ -91,7 +96,7 @@ class Generate(commands.Cog):
                 party = re.compile("(%s|%s)" % (usernameRegex, nicknameRegex)).findall(message.embeds[0].description)
 
                 ctx = await self.client.get_context(message)
-                result = await ctx.invoke(self.client.get_command('completed'), 'M+', gold_pot, group['payment_realm'], author, party[0], party[1], party[2], party[3])
+                result = await ctx.invoke(self.client.get_command('completed'), 'M+', gold_pot, f"{group['payment_realm']}-{faction}", author, party[0], party[1], party[2], party[3])
 
                 if result:
                     await channel.send(f"{self.doneEmoji} Succesfully added the Mythic+ run to the sheets!\n"
