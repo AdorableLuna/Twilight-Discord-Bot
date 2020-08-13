@@ -51,9 +51,9 @@ class Completed(commands.Cog):
                 "management": 10
             },
             "mount": {
-                "boosters": 70,
-                "advertiser": 18.5,
-                "management": 11.5
+                "boosters": 75,
+                "advertiser": 15,
+                "management": 10
             },
             "vision": {
                 "boosters": 75,
