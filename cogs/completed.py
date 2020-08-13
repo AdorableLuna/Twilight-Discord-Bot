@@ -96,6 +96,7 @@ class Completed(commands.Cog):
         except:
             raise commands.BadArgument("Realm or faction is not defined.")
 
+        author = ctx.author
         advertiser = DATA[3]
         eadv = DATA[3]
         booster1 = DATA[4]
@@ -198,6 +199,21 @@ class Completed(commands.Cog):
         # If no rows were updated, then add it
         if not updated:
             sheet.add(SPREADSHEET_ID, RANGE_NAME, TRUEDATA)
+
+        receipt = discord.Embed(title=f"{type} receipt",
+                                description=(f"{msg.id}\n"
+                                            f"{format(epot,',d')}\n"
+                                            f"{potrealm}\n"
+                                            f"{faction}\n"
+                                            f"{type}\n"
+                                            f"{advertiser}\n"
+                                            f"{booster1}\n"
+                                            f"{booster2 if booster2 else ''}\n"
+                                            f"{booster3 if booster3 else ''}\n"
+                                            f"{booster4 if booster4 else ''}"),
+                                color=0x00ff00)
+        receipt.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
+        await author.send("Please copy and paste this information into the message body when sending the mail.", embed=receipt)
 
         return msg
 
