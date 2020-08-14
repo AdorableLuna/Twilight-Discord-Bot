@@ -20,6 +20,7 @@ class Applications(commands.Cog):
         self.rareEmoji = "\U0001F7E6"
         self.declineEmoji = "\U0000274C"
         self.twilightEmoji = self.client.get_emoji(740282389682454540)
+        self.whitelistedUsers = { 152894585662603265 }
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
@@ -76,7 +77,7 @@ class Applications(commands.Cog):
                 nameRealm = message.content.splitlines()[0].replace(" ", "").split(":", 1)[1].split("-")
                 name = nameRealm[0].title()
                 realm = nameRealm[1].title()
-                display_name = f"{name}-{realm} [{'H' if faction == 'Horde' else 'A'}]"
+                display_name = f"{name}-{realm}"
 
                 await message.author.edit(nick=display_name)
                 await message.author.send(acceptedMessage)
@@ -93,6 +94,7 @@ class Applications(commands.Cog):
         if isinstance(message.channel, discord.DMChannel): return
         if self.client.user == message.author: return
         if message.channel.id != self.hordeChannelID and message.channel.id != self.allianceChannelID: return
+        if message.author.id in self.whitelistedUsers: return
 
         try:
             nameRealm = message.content.splitlines()[0].replace(" ", "").split(":", 1)[1].split("-")
