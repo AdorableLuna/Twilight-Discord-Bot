@@ -53,13 +53,13 @@ class Applications(commands.Cog):
 
                 "After careful consideration your M+ Boosting Application has been accepted within Twilight Boosting Community.\n\n"
 
-                "**1)** Head to `#choose-your-roles` and pick your roles. Be sure to only pick alt roles that have a score of 1.8k and are able to trade 465+ gear in all slots.\n"
-                "**2)** Go to `#mplus-faq` to learn our rules.\n"
+                "**1)** Head to <#700676105387901038> and pick your roles. Be sure to only pick alt roles that you are able to play near main level and able to trade 465+ gear in all slots.\n"
+                "**2)** Go to <#662766480068182026> to learn our rules.\n"
                 "**3)** We do pay-outs every 2 weeks, usually on a Friday. This is done via in game mail.\n"
                 "**4)** Any offensive or abusive behaviour toward buyers, members or staff will not be tolerated.\n"
                 "**5)** You can also advertise for runs and post them yourself in order to 'secure' yourself a spot into the group and benefit from our 17.3% fee, provided you've been accepted as an advertiser in Twilight.\n"
                 "**6)** We only accept GOLD for boosts. Should you plan to accept a boost that is not paid with gold, will end with removal from the community and loss of balance.\n"
-                "**7)** Once you've been entered in to our sheet and you've completed your first run, you can head to our `#Balance` channel and type .balance to check your current balance. M+ runs can take up to 24-48 hours to process before it's added to your balance.\n\n"
+                "**7)** Once you've been entered in to our sheet and you've completed your first run, you can head to our <#701182254122270720> channel and type .balance to check your current balance. M+ runs can take up to 24-48 hours to process before it's added to your balance.\n\n"
 
                 "Lastly, your name in the discord should ALWAYS match the name of the character you are wanting to get paid on so we know where to send the gold! If this is not the case, please open a ticket.\n\n"
 
