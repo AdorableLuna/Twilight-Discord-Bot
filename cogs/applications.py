@@ -43,11 +43,12 @@ class Applications(commands.Cog):
         mplusBoosterFactionRole = self.helper.getRole(f"Mplus {faction}")
         mplusBoosterRole = self.helper.getRole("Mplus Booster")
         boosteeRole = self.helper.getRole("Twilight Boostee")
+        boosterRole = self.helper.getRole("Twilight Booster")
 
         if councilRole in userRoles:
             if str(payload.emoji) == str(self.legendaryEmoji) or str(payload.emoji) == str(self.epicEmoji) or str(payload.emoji) == str(self.rareEmoji):
                 await message.author.remove_roles(boosteeRole)
-                await message.author.add_roles(mplusBoosterRole, mplusBoosterFactionRole)
+                await message.author.add_roles(boosterRole, mplusBoosterRole, mplusBoosterFactionRole)
 
                 acceptedMessage = (f"{self.twilightEmoji} **Welcome to Twilight!** {self.twilightEmoji}\n\n"
 
