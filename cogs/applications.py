@@ -1,4 +1,5 @@
 import discord
+import requests
 import json
 
 from helpers import helper
@@ -78,6 +79,15 @@ class Applications(commands.Cog):
                 nameRealm = message.content.splitlines()[0].replace(" ", "").split(":", 1)[1].split("-")
                 name = nameRealm[0].title()
                 realm = nameRealm[1].title()
+
+                link = f"https://raider.io/api/v1/characters/profile?region=eu&realm={realm}&name={name}"
+
+                response = requests.get(link)
+
+                if response.ok:
+                    data = json.loads(response.content)
+                    realm = data["realm"].replace(" ", "")
+
                 display_name = f"{name}-{realm}"
 
                 await message.author.edit(nick=display_name)
