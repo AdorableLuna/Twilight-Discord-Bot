@@ -19,7 +19,7 @@ class Voicechannel(commands.Cog):
         channels = (c for c in self.guild.channels if c.type==ChannelType.voice)
         for channel in channels:
             if "Boost" in channel.name:
-                if len(channel.members) == 0:
+                if len(channel.voice_states) == 0:
                     link = await channel.create_invite(max_age = 300)
                     msg = f"One empty voice channel as requested: **{channel.name}**\n{link}"
                     await ctx.message.channel.send(msg)
