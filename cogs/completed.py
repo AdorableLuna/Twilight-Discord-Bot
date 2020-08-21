@@ -59,6 +59,11 @@ class Completed(commands.Cog):
                 "boosters": 75,
                 "advertiser": 15,
                 "management": 10
+            },
+            "duo": {
+                "boosters": 71.2,
+                "advertiser": 17.3,
+                "management": 11.5
             }
         }
 
