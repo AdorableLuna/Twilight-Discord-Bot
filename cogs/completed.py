@@ -219,8 +219,9 @@ class Completed(commands.Cog):
 
     @completed.error
     async def completed_error(self, ctx, error):
+        created_at = datetime.now(timezone('Europe/Paris')).strftime("%d-%m %H:%M:%S")
         await self.channel.send(f'{ctx.message.author.mention}, there was an error with your command. Please check the pins for the correct format.')
-        print(".completed:", error)
+        print(f"{created_at} .completed:", error)
 
         return
 
