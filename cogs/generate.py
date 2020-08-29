@@ -139,9 +139,7 @@ class Generate(commands.Cog):
 
         if str(payload.emoji) == str(self.tankEmoji) or str(payload.emoji) == str(self.healerEmoji) or str(payload.emoji) == str(self.dpsEmoji):
             query = f"""INSERT INTO mythicplus.booster (groupid, `user`, `role`)
-                       SELECT '{id}', '{user.mention}', '{role}' FROM DUAL
-                       WHERE NOT EXISTS (SELECT groupid, `user` FROM mythicplus.booster
-                                WHERE groupid = '{id}' AND `user` = '{user.mention}')"""
+                       VALUES ('{id}', '{user.mention}', '{role}')"""
             self.dbc.insert(query)
 
         if str(payload.emoji) == str(self.keystoneEmoji):
@@ -368,30 +366,11 @@ class Generate(commands.Cog):
             await ctx.message.channel.send(':x: The command you have entered is invalid. Please check if the command you entered is valid. :x:', delete_after=10.0)
 
     async def cancelGroup(self, message):
-        id = message.id
+        group = list(dict.fromkeys(self.getGroup(message)))
         mentions = ""
 
-        try:
-            tank = self.dbc.selectPriorityBooster("Tank", id, 1)[0]["Tank"]
-            mentions += tank + " "
-        except:
-            pass
-        try:
-            healer = self.dbc.selectPriorityBooster("Healer", id, 1)[0]["Healer"]
-            mentions += healer + " "
-        except:
-            pass
-        dps = self.dbc.selectPriorityBooster("Damage", id, 2)
-        try:
-            dpsOne = dps[0]["Damage"]
-            mentions += dpsOne + " "
-        except:
-            pass
-        try:
-            dpsTwo = dps[1]["Damage"]
-            mentions += dpsTwo
-        except:
-            pass
+        for i in range(len(group)):
+            mentions += group[i]
 
         if mentions:
             createdMessage = (f"{mentions}\n" +
@@ -399,61 +378,96 @@ class Generate(commands.Cog):
             await message.channel.send(createdMessage)
 
     async def updateGroup(self, message):
-        id = message.id
+        group = self.getGroup(message)
+        tank = group[0]
+        healer = group[1]
+        dpsOne = group[2]
+        dpsTwo = group[3]
+        keystone = group[4]
 
-        try:
-            keystoneQuery = f"""SELECT B.`user`, B.`role`, COUNT(B.`user`) as total FROM mythicplus.booster B
-                                JOIN mythicplus.keystone K
-                                ON B.`user` = K.`user`
-                                AND B.groupid = K.groupid
-                                WHERE K.groupid = '{id}' AND K.has_keystone = 1 LIMIT 1"""
-            keystone = self.dbc.select(keystoneQuery)
-            keystoneHolder = "" if keystone["user"] is None else keystone["user"]
-            keystoneRole = keystone["role"]
-            totalKeystones = keystone["total"]
-        except:
-            keystoneHolder = ""
-            keystoneRole = ""
-            totalKeystones = 0
-
-        keystone = False
-        if totalKeystones > 1: keystone = True
-
-        try:
-            tank = self.dbc.selectPriorityBooster("Tank", id, 1, keystone)[0]["Tank"]
-        except:
-            tank = ""
-        try:
-            healer = self.dbc.selectPriorityBooster("Healer", id, 1, keystone)[0]["Healer"]
-        except:
-            healer = ""
-        dps = self.dbc.selectPriorityBooster("Damage", id, 2, keystone)
-        try:
-            dpsOne = dps[0]["Damage"]
-        except:
-            dpsOne = ""
-        try:
-            dpsTwo = dps[1]["Damage"]
-        except:
-            dpsTwo = ""
-
-        if keystoneRole == "Tank":
-            tank = keystoneHolder
-        elif keystoneRole == "Healer":
-            healer = keystoneHolder
-        elif keystoneRole == "Damage":
-            if dpsOne != keystoneHolder:
-                dpsTwo = keystoneHolder
-
-        if tank and healer and dpsOne and dpsTwo and keystoneHolder:
-            group = [tank, healer, dpsOne, dpsTwo, keystoneHolder]
+        if tank and healer and dpsOne and dpsTwo and keystone:
             await self.createGroup(message, group)
             return
 
         embed = message.embeds[0]
         embed.description = f"""Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n
-                            {self.tankEmoji} {tank}\n{self.healerEmoji} {healer}\n{self.dpsEmoji} {dpsOne}\n{self.dpsEmoji} {dpsTwo}\n\n{self.keystoneEmoji} {keystoneHolder}"""
+                            {self.tankEmoji} {tank}\n{self.healerEmoji} {healer}\n{self.dpsEmoji} {dpsOne}\n{self.dpsEmoji} {dpsTwo}\n\n{self.keystoneEmoji} {keystone}"""
         await message.edit(embed=embed)
+
+    def getGroup(self, message):
+        id = message.id
+
+        allBoostersQuery = f"SELECT * FROM mythicplus.booster WHERE groupid = '{id}'"
+        allBoosters = self.dbc.select(allBoostersQuery, True)
+        tanks = [booster for booster in allBoosters if booster['role'] == "Tank"]
+        healers = [booster for booster in allBoosters if booster['role'] == "Healer"]
+        dps = [booster for booster in allBoosters if booster['role'] == "Damage"]
+        keystoneQuery = f"SELECT * FROM mythicplus.keystone where groupid = '{id}' AND has_keystone = 1 LIMIT 1;"
+        keystone = self.dbc.select(keystoneQuery)
+        keystone = "" if keystone == None else keystone['user']
+
+        try:
+            keystoneUser = [booster for booster in tanks if booster['user'] == keystone][0]['user']
+            role = 'Tank'
+        except:
+            try:
+                keystoneUser = [booster for booster in healers if booster['user'] == keystone][0]['user']
+                role = 'Healer'
+            except:
+                try:
+                    keystoneUser = [booster for booster in dps if booster['user'] == keystone][0]['user']
+                    role = 'DPS'
+                except:
+                    keystoneUser = None
+                    role = ''
+
+        return self.getBoosters(tanks, healers, dps, keystoneUser, role)
+
+    def getBoosters(self, tanks, healers, dps, keystoneUser, role):
+        tank = next((booster['user'] for booster in tanks), "")
+        healer = next((booster['user'] for booster in healers if booster['user'] != tank), "")
+        try:
+            dpsOne = [booster['user'] for booster in dps if booster['user'] != healer and booster['user'] != tank][0]
+        except:
+            dpsOne = ""
+        try:
+            dpsTwo = [booster['user'] for booster in dps if booster['user'] != healer and booster['user'] != tank][1]
+        except:
+            dpsTwo = ""
+
+        if keystoneUser:
+            if role == 'Tank':
+                tank = keystoneUser
+                healer = next((booster['user'] for booster in healers if booster['user'] != keystoneUser and booster['user'] != dpsOne and booster['user'] != dpsTwo), "")
+                inDPS = False
+
+            if role == 'Healer':
+                tank = next((booster['user'] for booster in tanks if booster['user'] != keystoneUser and booster['user'] != dpsOne and booster['user'] != dpsTwo), "")
+                healer = keystoneUser
+                inDPS = False
+
+            if role == 'DPS':
+                tank = next((booster['user'] for booster in tanks if booster['user'] != keystoneUser and booster['user'] != healer), "")
+                healer = next((booster['user'] for booster in healers if booster['user'] != keystoneUser and booster['user'] != tank), "")
+                inDPS = True
+
+            if inDPS:
+                if dpsOne != keystoneUser:
+                    dpsTwo = dpsOne
+                    dpsOne = keystoneUser
+            else:
+                try:
+                    dpsOne = [booster['user'] for booster in dps if booster['user'] != keystoneUser and booster['user'] != healer and booster['user'] != tank][0]
+                except:
+                    dpsOne = ""
+                try:
+                    dpsTwo = [booster['user'] for booster in dps if booster['user'] != keystoneUser and booster['user'] != healer and booster['user'] != tank][1]
+                except:
+                    dpsTwo = ""
+
+        keystone = "" if keystoneUser == None else keystoneUser
+        group = [tank, healer, dpsOne, dpsTwo, keystone]
+        return group
 
     async def createGroup(self, message, group, team=False):
         query = f"""UPDATE mythicplus.group
