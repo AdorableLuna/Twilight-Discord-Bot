@@ -22,7 +22,7 @@ class Helper(object):
             name = name[3:-1]
             member = self.guild.get_member(int(name))
 
-            return self.guild.get_member(int(name)).display_name
+            return self.guild.get_member(int(name)).nick
         else:
             return name
 
