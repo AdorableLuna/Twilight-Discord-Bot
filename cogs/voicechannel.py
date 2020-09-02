@@ -1,22 +1,17 @@
 import discord
-import json
 
 from discord import ChannelType
 from discord.utils import get
 from discord.ext import commands
 
-with open('./config.json', 'r') as cjson:
-    config = json.load(cjson)
-
 class Voicechannel(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-        self.guild = self.client.get_guild(config["GUILD_ID"])
 
     @commands.command(aliases=['vc'])
     async def voicechannel(self, ctx):
-        channels = (c for c in self.guild.channels if c.type==ChannelType.voice)
+        channels = (c for c in ctx.guild.channels if c.type==ChannelType.voice)
         for channel in channels:
             if "Boost" in channel.name:
                 if len(channel.voice_states) == 0:

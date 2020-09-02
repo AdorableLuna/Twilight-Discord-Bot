@@ -6,15 +6,11 @@ from helpers import helper
 from discord.utils import get
 from discord.ext import commands
 
-with open('./config.json', 'r') as cjson:
-    config = json.load(cjson)
-
 class Upgrade(commands.Cog):
 
     def __init__(self, client):
         self.client = client
         self.helper = helper.Helper(self.client)
-        self.guild = self.client.get_guild(config["GUILD_ID"])
         self.channelID = 728967077381275658
         self.tankEmoji = self.client.get_emoji(714930608266018859)
         self.healerEmoji = self.client.get_emoji(714930600267612181)
@@ -44,10 +40,10 @@ class Upgrade(commands.Cog):
                 dpsScore = scores["dps"]
 
                 userRoles = author.roles
-                rareRole = self.helper.getRole("Rare")
-                epicRole = self.helper.getRole("Epic")
-                legendaryRole = self.helper.getRole("Legendary")
-                highKeyRole = self.helper.getRole(f"Highkey Booster {faction}")
+                rareRole = self.helper.getRole(ctx.guild, "Rare")
+                epicRole = self.helper.getRole(ctx.guild, "Epic")
+                legendaryRole = self.helper.getRole(ctx.guild, "Legendary")
+                highKeyRole = self.helper.getRole(ctx.guild, f"Highkey Booster {faction}")
                 role = ""
 
                 if rareRole in userRoles and epicRole in userRoles and legendaryRole in userRoles:

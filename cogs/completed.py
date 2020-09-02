@@ -17,7 +17,6 @@ class Completed(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.helper = helper.Helper(self.client)
-        self.guild = self.client.get_guild(config["GUILD_ID"])
         self.channel = self.client.get_channel(731479403862949928)
         self.taxes = {
             "m+": {
@@ -130,14 +129,14 @@ class Completed(commands.Cog):
         except:
             booster4 = ""
 
-        advertiser = self.helper.checkName(advertiser)
-        booster1 = self.helper.checkName(booster1)
+        advertiser = self.helper.checkName(ctx.guild, advertiser)
+        booster1 = self.helper.checkName(ctx.guild, booster1)
         if booster2:
-            booster2 = self.helper.checkName(booster2)
+            booster2 = self.helper.checkName(ctx.guild, booster2)
         if booster3:
-            booster3 = self.helper.checkName(booster3)
+            booster3 = self.helper.checkName(ctx.guild, booster3)
         if booster4:
-            booster4 = self.helper.checkName(booster4)
+            booster4 = self.helper.checkName(ctx.guild, booster4)
 
         adfee = int(pot) * (self.taxes[type.lower()]["advertiser"] / 100)
         boosterfee = int(pot) * round(((self.taxes[type.lower()]["boosters"] / 100) / totalBoosters), 3)

@@ -5,15 +5,11 @@ import json
 from helpers import helper
 from discord.ext import commands
 
-with open('./config.json', 'r') as cjson:
-    config = json.load(cjson)
-
 class Applications(commands.Cog):
 
     def __init__(self, client):
         self.client = client
         self.helper = helper.Helper(self.client)
-        self.guild = self.client.get_guild(config["GUILD_ID"])
         self.hordeChannelID = 740272368211066981
         self.allianceChannelID = 740272404416430100
         self.legendaryEmoji = "\U0001F7E7"
@@ -28,6 +24,7 @@ class Applications(commands.Cog):
         if self.client.user == payload.member: return
         if payload.channel_id != self.hordeChannelID and payload.channel_id != self.allianceChannelID: return
         channel = self.client.get_channel(payload.channel_id)
+        guild = self.client.get_guild(payload.guild_id)
 
         if "horde" in channel.name:
             faction = "Horde"
@@ -36,15 +33,15 @@ class Applications(commands.Cog):
 
         message = await channel.fetch_message(payload.message_id)
         userRoles = payload.member.roles
-        councilRole = self.helper.getRole("Council")
-        legendaryRole = self.helper.getRole("Legendary")
-        epicRole = self.helper.getRole("Epic")
-        rareRole = self.helper.getRole("Rare")
-        highKeyRole = self.helper.getRole(f"Highkey Booster {faction}")
-        mplusBoosterFactionRole = self.helper.getRole(f"Mplus {faction}")
-        mplusBoosterRole = self.helper.getRole("Mplus Booster")
-        boosteeRole = self.helper.getRole("Twilight Boostee")
-        boosterRole = self.helper.getRole("Twilight Booster")
+        councilRole = self.helper.getRole(guild, "Council")
+        legendaryRole = self.helper.getRole(guild, "Legendary")
+        epicRole = self.helper.getRole(guild, "Epic")
+        rareRole = self.helper.getRole(guild, "Rare")
+        highKeyRole = self.helper.getRole(guild, f"Highkey Booster {faction}")
+        mplusBoosterFactionRole = self.helper.getRole(guild, f"Mplus {faction}")
+        mplusBoosterRole = self.helper.getRole(guild, "Mplus Booster")
+        boosteeRole = self.helper.getRole(guild, "Twilight Boostee")
+        boosterRole = self.helper.getRole(guild, "Twilight Booster")
 
         if councilRole in userRoles:
             if str(payload.emoji) == str(self.legendaryEmoji) or str(payload.emoji) == str(self.epicEmoji) or str(payload.emoji) == str(self.rareEmoji):
