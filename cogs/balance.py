@@ -27,12 +27,13 @@ class Balance(commands.Cog):
 
         author = ctx.message.author
         SPREADSHEET_ID = config["SPREADSHEET_ID"]
-        allRows = sheet.getAllRows(SPREADSHEET_ID, "'Booster payments'!C13:D")
+        allRows = sheet.getAllRows(SPREADSHEET_ID, "'Balance'!A2:D")
 
         for i in range(len(allRows)):
+            if not allRows[i]: continue
             if allRows[i][0] == author.display_name:
                 try:
-                    balance = allRows[i][1]
+                    balance = allRows[i][3]
                 except:
                     balance = 0
 
@@ -42,6 +43,7 @@ class Balance(commands.Cog):
                 await author.send(embed=balanceEmbed)
                 return
 
+        print(f"Couldn't retrieve balance of {author.display_name}", type(author.display_name))
         await author.send("Your balance could not be retrieved. Please message someone from Council or Management.")
 
 def setup(client):

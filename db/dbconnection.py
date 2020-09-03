@@ -67,21 +67,30 @@ class DBConnection(object):
 
     # This will return the first booster with a keystone,
     # if there are no keystone holders then it returns the first booster to sign up
-    def selectPriorityBooster(self, role, groupid, limit):
+    def selectPriorityBooster(self, role, groupid, limit, keystone=False):
         try:
             connection = self.get_connection()
 
             if connection.is_connected():
-                # First SELECT retrieves the first keystoneholder if there is one
-                # Second SELECT retrieves the non keystoneholder if there are no keystoneholders
-                query = f"""SELECT Distinct {role} FROM (
-                            (SELECT K.id, B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
-                            ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 1 ORDER BY K.id ASC LIMIT 1)
-                            UNION
-                            (SELECT B.id, B.`user` as '{role}' FROM mythicplus.booster B LEFT JOIN mythicplus.keystone K
-                            ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE B.groupid = '{groupid}' AND B.`role` = '{role}' ORDER BY B.id ASC LIMIT {limit})
-                        ) UNIONED
-                        LIMIT {limit}"""
+
+                if keystone:
+                    # SELECT retrieves the non keystoneholder if there are no keystoneholders
+                    query = f"""SELECT Distinct {role} FROM (
+                                (SELECT B.id, B.`user` as '{role}' FROM mythicplus.booster B LEFT JOIN mythicplus.keystone K
+                                ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE B.groupid = '{groupid}' AND B.`role` = '{role}' ORDER BY B.id ASC LIMIT {limit})
+                            ) RESULT
+                            LIMIT {limit}"""
+                else:
+                    # First SELECT retrieves the first keystoneholder if there is one
+                    # Second SELECT retrieves the non keystoneholder if there are no keystoneholders
+                    query = f"""SELECT Distinct {role} FROM (
+                                (SELECT K.id, B.`user` as '{role}' FROM mythicplus.booster B INNER JOIN mythicplus.keystone K
+                                ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE K.groupid = '{groupid}' AND B.`role` = '{role}' AND K.has_keystone = 1 ORDER BY K.id ASC LIMIT 1)
+                                UNION
+                                (SELECT B.id, B.`user` as '{role}' FROM mythicplus.booster B LEFT JOIN mythicplus.keystone K
+                                ON B.groupid = K.groupid AND B.`user` = K.`user` WHERE B.groupid = '{groupid}' AND B.`role` = '{role}' ORDER BY B.id ASC LIMIT {limit})
+                            ) UNIONED
+                            LIMIT {limit}"""
                 cursor = connection.cursor(dictionary = True)
 
                 cursor.execute(query)
