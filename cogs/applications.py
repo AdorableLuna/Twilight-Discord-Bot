@@ -103,14 +103,16 @@ class Applications(commands.Cog):
         if self.client.user == message.author: return
         if message.channel.id != self.hordeChannelID and message.channel.id != self.allianceChannelID: return
         if message.author.id in self.whitelistedUsers: return
+        if not len(message.content.splitlines()) >= 4:
+            await self.delete_message(message)
+            return
 
         try:
             nameRealm = message.content.splitlines()[0].replace(" ", "").split(":", 1)[1].split("-")
             name = nameRealm[0].title()
             realm = nameRealm[1].title()
         except:
-            await message.author.send(f"Please use the correct format given in the pins when trying to apply.")
-            await message.delete()
+            await self.delete_message(message)
             return
 
         await message.add_reaction(self.legendaryEmoji)
@@ -119,6 +121,10 @@ class Applications(commands.Cog):
         await message.add_reaction(self.declineEmoji)
 
         await self.client.process_commands(message)
+
+    async def delete_message(self, message):
+        await message.author.send(f"Please use the correct format given in the pins when trying to apply.")
+        await message.delete()
 
 def setup(client):
     client.add_cog(Applications(client))
