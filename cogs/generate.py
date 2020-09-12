@@ -55,6 +55,8 @@ class Generate(commands.Cog):
         if self.client.user == payload.member: return
         user = payload.member
         channel = self.client.get_channel(payload.channel_id)
+        if not channel: return
+        if isinstance(channel, discord.DMChannel): return
 
         if "boosts" not in channel.name: return
         message = await channel.fetch_message(payload.message_id)
@@ -95,12 +97,12 @@ class Generate(commands.Cog):
                 ctx.author = get(ctx.guild.members, mention=author)
                 result = await ctx.invoke(self.client.get_command('completed'), 'M+', gold_pot, f"{group['payment_realm']}-{faction}", author, party[0], party[1], party[2], party[3])
 
-                if result:
+                if result[0]:
                     await channel.send(f"{self.doneEmoji} Succesfully added the Mythic+ run to the sheets!\n"
                                        f"Group id: {id}\n"
-                                       f"{result.jump_url}")
-
+                                       f"{result[1].jump_url}")
                 else:
+                    await result[1].delete()
                     await channel.send(f"{self.cancelEmoji} Something went wrong when trying to add the Mythic+ run to the sheets. Please add it manually in {self.completedChannel.mention}\n"
                                        f"Group id: {id}")
 
@@ -201,10 +203,12 @@ class Generate(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
+        channel = self.client.get_channel(payload.channel_id)
+        if not channel: return
+        if isinstance(channel, discord.DMChannel): return #from completed
         guild = self.client.get_guild(payload.guild_id)
         user = guild.get_member(payload.user_id)
         if self.client.user == user: return
-        channel = self.client.get_channel(payload.channel_id)
 
         if "boosts" not in channel.name: return
         message = await channel.fetch_message(payload.message_id)
