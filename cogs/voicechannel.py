@@ -1,13 +1,11 @@
-import discord
-
+from cogs.maincog import Maincog
 from discord import ChannelType
-from discord.utils import get
 from discord.ext import commands
 
-class Voicechannel(commands.Cog):
+class Voicechannel(Maincog):
 
     def __init__(self, client):
-        self.client = client
+        Maincog.__init__(self, client)
 
     @commands.command(aliases=['vc'])
     async def voicechannel(self, ctx):

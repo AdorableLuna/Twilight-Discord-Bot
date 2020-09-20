@@ -1,7 +1,7 @@
 import discord
 import json
 
-from discord.utils import get
+from cogs.maincog import Maincog
 from discord.ext import commands
 from gsheet import *
 
@@ -10,13 +10,14 @@ sheet = gsheet()
 with open('./config.json', 'r') as cjson:
     config = json.load(cjson)
 
-class Balance(commands.Cog):
+class Balance(Maincog):
 
     def __init__(self, client):
-        self.client = client
+        Maincog.__init__(self, client, whitelistedChannels = [756884303580758086])
 
     @commands.command()
     async def balance(self, ctx):
+        if not self.checkIfAllowedChannel(ctx.channel.id): return
         if isinstance(ctx.message.channel, discord.DMChannel):
             await ctx.message.channel.send("This feature is, sadly, not supported. Type the command in the correct channel and I will DM your balance.")
             return

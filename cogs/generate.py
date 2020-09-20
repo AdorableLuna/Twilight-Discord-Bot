@@ -1,24 +1,22 @@
 import discord
 import re
-import asyncio
 import datetime
 import time
 import itertools
 import math
 import locale
 
-from helpers import helper
+from cogs.maincog import Maincog
 from discord.utils import get
 from discord.ext import commands
 from db import dbconnection as dbc
 
 locale.setlocale(locale.LC_ALL, '')
 
-class Generate(commands.Cog):
+class Generate(Maincog):
 
     def __init__(self, client):
-        self.client = client
-        self.helper = helper.Helper(self.client)
+        Maincog.__init__(self, client)
         self.dbc = dbc.DBConnection()
         self.completedChannel = self.client.get_channel(731479403862949928)
         self.tankEmoji = self.client.get_emoji(714930608266018859)
@@ -52,7 +50,7 @@ class Generate(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        if self.client.user == payload.member: return
+        if self.checkIfUserIsItself(payload.member): return
         user = payload.member
         channel = self.client.get_channel(payload.channel_id)
         if not channel: return
@@ -208,7 +206,7 @@ class Generate(commands.Cog):
         if isinstance(channel, discord.DMChannel): return #from completed
         guild = self.client.get_guild(payload.guild_id)
         user = guild.get_member(payload.user_id)
-        if self.client.user == user: return
+        if self.checkIfUserIsItself(user): return
 
         if "boosts" not in channel.name: return
         message = await channel.fetch_message(payload.message_id)

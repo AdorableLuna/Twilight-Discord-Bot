@@ -2,7 +2,7 @@ import discord
 import json
 import re
 
-from helpers import helper
+from cogs.maincog import Maincog
 from discord.ext import commands
 from datetime import datetime
 from pytz import timezone
@@ -13,11 +13,10 @@ with open('./config.json', 'r') as cjson:
 
 sheet = gsheet()
 
-class Completed(commands.Cog):
+class Completed(Maincog):
 
     def __init__(self, client):
-        self.client = client
-        self.helper = helper.Helper(self.client)
+        Maincog.__init__(self, client, whitelistedChannels = [731479403862949928])
         self.channel = self.client.get_channel(731479403862949928)
         self.cancelEmoji = "\U0000274C"
         self.doneEmoji = "\U00002705"
@@ -341,14 +340,6 @@ class Completed(commands.Cog):
             name = ""
 
         return name
-
-    @completed.error
-    async def completed_error(self, ctx, error):
-        created_at = datetime.now(timezone('Europe/Paris')).strftime("%d-%m %H:%M:%S")
-        await self.channel.send(f'{ctx.message.author.mention}, there was an error with your command. Please check the pins for the correct format.')
-        print(f"{created_at} .completed:", error)
-
-        return
 
 def setup(client):
     client.add_cog(Completed(client))
