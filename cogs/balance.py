@@ -1,14 +1,7 @@
 import discord
-import json
 
 from cogs.maincog import Maincog
 from discord.ext import commands
-from gsheet import *
-
-sheet = gsheet()
-
-with open('./config.json', 'r') as cjson:
-    config = json.load(cjson)
 
 class Balance(Maincog):
 
@@ -27,8 +20,8 @@ class Balance(Maincog):
         await ctx.message.channel.send(embed=embed)
 
         author = ctx.message.author
-        SPREADSHEET_ID = config["SPREADSHEET_ID"]
-        allRows = sheet.getAllRows(SPREADSHEET_ID, "'Balance'!A2:D")
+        SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]
+        allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, "'Balance'!A2:D")
 
         if not allRows:
             await author.send("Something went wrong with retrieving data from the sheets, please try again. If this continues please contact someone from Council or Management.")

@@ -1,17 +1,10 @@
 import discord
-import json
 import re
 
 from cogs.maincog import Maincog
 from discord.ext import commands
 from datetime import datetime
 from pytz import timezone
-from gsheet import *
-
-with open('./config.json', 'r') as cjson:
-    config = json.load(cjson)
-
-sheet = gsheet()
 
 class Completed(Maincog):
 
@@ -82,7 +75,7 @@ class Completed(Maincog):
 
             if str(payload.emoji) == str(self.doneEmoji):
                 user = self.client.get_user(payload.user_id)
-                guild = self.client.get_guild(config['GUILD_ID'])
+                guild = self.client.get_guild(self.client.config['GUILD_ID'])
                 embed = message.embeds[0]
                 fields = embed.fields
                 type = fields[0].value
@@ -274,8 +267,8 @@ class Completed(Maincog):
         else:
             RANGE_NAME = "'MISC'!A3:N"
 
-        SPREADSHEET_ID = config["SPREADSHEET_ID"]
-        allRows = sheet.getAllRows(SPREADSHEET_ID, f"{RANGE_NAME}")
+        SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]
+        allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, f"{RANGE_NAME}")
 
         if not allRows:
             await author.send("Something went wrong with retrieving data from the sheets, please try again. If this continues please contact someone from Council or Management.")
@@ -302,13 +295,13 @@ class Completed(Maincog):
             if emptyRow:
 
                 # Update that row
-                result = sheet.update(SPREADSHEET_ID, UPDATE_RANGE, TRUEDATA)
+                result = self.client.sheet.update(SPREADSHEET_ID, UPDATE_RANGE, TRUEDATA)
                 updated = True;
                 break
 
         # If no rows were updated, then add it
         if not updated:
-            result = sheet.add(SPREADSHEET_ID, RANGE_NAME, TRUEDATA)
+            result = self.client.sheet.add(SPREADSHEET_ID, RANGE_NAME, TRUEDATA)
 
         if result:
             receipt = discord.Embed(title=f"{type} receipt",

@@ -97,7 +97,6 @@ class Applications(Maincog):
     @commands.Cog.listener()
     async def on_message(self, message):
         if isinstance(message.channel, discord.DMChannel): return
-        if self.checkIfUserIsItself(message.author): return
         if not self.checkIfAllowedChannel(message.channel.id): return
         if self.checkIfAllowedUser(message.author.id): return
 
