@@ -1,8 +1,15 @@
+import logging
 import os
 import json
 
 from discord.ext import commands
 from gsheet import *
+
+log = logging.getLogger('discord')
+log.setLevel(logging.ERROR)
+handler = logging.FileHandler(filename='logs/discord.log', encoding='utf-8', mode='a')
+handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s', '%Y-%m-%d %H:%M:%S'))
+log.addHandler(handler)
 
 description = """
 The Twilight bot that helps advertisers, boosters and management do their job.
@@ -28,6 +35,10 @@ class Twilight(commands.Bot):
             config = json.load(cjson)
 
         return config
+
+    async def on_command_error(self, ctx, error):
+        await ctx.send(f'{ctx.author.mention}, there was an error with your command. Please check if your command has the correct format, otherwise notify the staff.')
+        log.error(f"Command: {ctx.command.name} | {error}")
 
     async def on_ready(self):
         print(f'{self.user} has connected to Discord!')
