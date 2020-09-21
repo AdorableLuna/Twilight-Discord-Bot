@@ -18,11 +18,6 @@ class Generate(Maincog):
     def __init__(self, client):
         Maincog.__init__(self, client)
         self.dbc = dbc.DBConnection()
-        self.completedChannel = self.client.get_channel(731479403862949928)
-        self.tankEmoji = self.client.get_emoji(714930608266018859)
-        self.healerEmoji = self.client.get_emoji(714930600267612181)
-        self.dpsEmoji = self.client.get_emoji(714930578461425724)
-        self.keystoneEmoji = self.client.get_emoji(715918950092898346)
         self.teamEmoji = "\U0001F1F9"
         self.cancelEmoji = "\U0000274C"
         self.doneEmoji = "\U00002705"
@@ -47,6 +42,14 @@ class Generate(Maincog):
             "Mail",
             "Plate"
         ]
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.completedChannel = self.client.get_channel(731479403862949928)
+        self.tankEmoji = self.client.get_emoji(714930608266018859)
+        self.healerEmoji = self.client.get_emoji(714930600267612181)
+        self.dpsEmoji = self.client.get_emoji(714930578461425724)
+        self.keystoneEmoji = self.client.get_emoji(715918950092898346)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):

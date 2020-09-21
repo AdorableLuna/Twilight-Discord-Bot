@@ -10,7 +10,6 @@ class Completed(Maincog):
 
     def __init__(self, client):
         Maincog.__init__(self, client, whitelistedChannels = [731479403862949928])
-        self.channel = self.client.get_channel(731479403862949928)
         self.cancelEmoji = "\U0000274C"
         self.doneEmoji = "\U00002705"
         self.taxes = {
@@ -60,6 +59,10 @@ class Completed(Maincog):
                 "management": 11.5
             }
         }
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.channel = self.client.get_channel(731479403862949928)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
