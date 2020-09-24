@@ -28,7 +28,7 @@ class Twilight(commands.Bot):
                 try:
                     self.load_extension(f'cogs.{filename[:-3]}')
                 except Exception as e:
-                    print(f'Failed to load extension {filename[:-3]}.')
+                    print(f'Failed to load extension {filename[:-3]}.', e)
 
     def __load_config(self):
         with open('./config.json', 'r') as cjson:
@@ -37,6 +37,9 @@ class Twilight(commands.Bot):
         return config
 
     async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.CommandNotFound):
+            return
+
         await ctx.send(f'{ctx.author.mention}, there was an error with your command. Please check if your command has the correct format, otherwise notify the staff.')
         log.error(f"Command: {ctx.command.name} | {error}")
 
