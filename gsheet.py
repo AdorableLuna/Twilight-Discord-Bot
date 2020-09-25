@@ -1,4 +1,6 @@
 from __future__ import print_function
+from datetime import datetime
+from pytz import timezone
 import pickle
 import os.path
 from googleapiclient.discovery import build
@@ -36,9 +38,15 @@ class gsheet(object):
         body = {
             'values': values
         }
-        result = sheet.values().append(
-            spreadsheetId=sheetid, range=sheetrange,
-            valueInputOption='USER_ENTERED', body=body).execute()
+        try:
+            sheet.values().append(
+                spreadsheetId=sheetid, range=sheetrange,
+                valueInputOption='USER_ENTERED', body=body).execute()
+            return True
+        except Exception as e:
+            self.generateError(e)
+            return False
+
     def update(self, sheetid, sheetrange, ivalue):
         # Call the Sheets API
         sheet = self.service.spreadsheets()
@@ -47,12 +55,26 @@ class gsheet(object):
         body = {
             'values': values
         }
-        result = sheet.values().update(
-            spreadsheetId=sheetid, range=sheetrange,
-            valueInputOption='USER_ENTERED', body=body).execute()
+        try:
+            sheet.values().update(
+                spreadsheetId=sheetid, range=sheetrange,
+                valueInputOption='USER_ENTERED', body=body).execute()
+            return True
+        except Exception as e:
+            self.generateError(e)
+            return False
+
     def getAllRows(self, sheetid, sheetrange):
         # Call the Sheets API
         sheet = self.service.spreadsheets()
-        result = sheet.values().get(
-            spreadsheetId=sheetid, range=sheetrange).execute()
-        return result.get('values', [])
+        try:
+            result = sheet.values().get(
+                spreadsheetId=sheetid, range=sheetrange).execute()
+            return result.get('values', [])
+        except Exception as e:
+            self.generateError(e)
+            return False
+
+    def generateError(self, exception):
+        created_at = datetime.now(timezone('Europe/Paris')).strftime("%d-%m %H:%M:%S")
+        print(f"{created_at} Google Sheets API", e)

@@ -2,14 +2,14 @@ import discord
 import os.path
 import re
 
+from cogs.maincog import Maincog
 from cryptography.fernet import Fernet
 from discord.ext import commands
 
-class Cryptography(commands.Cog):
+class Cryptography(Maincog):
 
     def __init__(self, client):
-        self.client = client
-        self.encryptionChannelID = 741460284887269401
+        Maincog.__init__(self, client, whitelistedChannels = [741460284887269401])
 
         if not os.path.exists('secret.key'):
             self.generate_key()
@@ -50,7 +50,7 @@ class Cryptography(commands.Cog):
         Decrypts a message
         """
         if isinstance(ctx.message.channel, discord.DMChannel): return
-        if ctx.message.channel.id != self.encryptionChannelID: return
+        if not self.checkIfAllowedChannel(ctx.channel.id): return
 
         key = self.load_key()
         f = Fernet(key)

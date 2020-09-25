@@ -2,23 +2,23 @@ import discord
 import requests
 import json
 
-from helpers import helper
-from discord.utils import get
+from cogs.maincog import Maincog
 from discord.ext import commands
 
-class Upgrade(commands.Cog):
+class Upgrade(Maincog):
 
     def __init__(self, client):
-        self.client = client
-        self.helper = helper.Helper(self.client)
-        self.channelID = 728967077381275658
+        Maincog.__init__(self, client, whitelistedChannels = [728967077381275658])
+
+    @commands.Cog.listener()
+    async def on_ready(self):
         self.tankEmoji = self.client.get_emoji(714930608266018859)
         self.healerEmoji = self.client.get_emoji(714930600267612181)
         self.dpsEmoji = self.client.get_emoji(714930578461425724)
 
     @commands.command()
     async def upgrade(self, ctx):
-        if ctx.message.channel.id != self.channelID: return
+        if not self.checkIfAllowedChannel(ctx.channel.id): return
 
         author = ctx.message.author
         character = ctx.message.content[9:].split('-')

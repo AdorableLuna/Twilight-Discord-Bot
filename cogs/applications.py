@@ -2,27 +2,27 @@ import discord
 import requests
 import json
 
-from helpers import helper
+from cogs.maincog import Maincog
 from discord.ext import commands
 
-class Applications(commands.Cog):
+class Applications(Maincog):
 
     def __init__(self, client):
-        self.client = client
-        self.helper = helper.Helper(self.client)
-        self.hordeChannelID = 740272368211066981
-        self.allianceChannelID = 740272404416430100
+        Maincog.__init__(self, client, whitelistedChannels = [740272368211066981, 740272404416430100],
+                                       whitelistedUsers = [152894585662603265])
         self.legendaryEmoji = "\U0001F7E7"
         self.epicEmoji = "\U0001F7EA"
         self.rareEmoji = "\U0001F7E6"
         self.declineEmoji = "\U0000274C"
-        self.twilightEmoji = self.client.get_emoji(740282389682454540)
-        self.whitelistedUsers = { 152894585662603265 }
 
     @commands.Cog.listener()
+    async def on_ready(self):
+        self.twilightEmoji = self.client.get_emoji(740282389682454540)
+    
+    @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        if self.client.user == payload.member: return
-        if payload.channel_id != self.hordeChannelID and payload.channel_id != self.allianceChannelID: return
+        if self.checkIfUserIsItself(payload.member): return
+        if not self.checkIfAllowedChannel(payload.channel_id): return
         channel = self.client.get_channel(payload.channel_id)
         guild = self.client.get_guild(payload.guild_id)
 
@@ -100,17 +100,19 @@ class Applications(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         if isinstance(message.channel, discord.DMChannel): return
-        if self.client.user == message.author: return
-        if message.channel.id != self.hordeChannelID and message.channel.id != self.allianceChannelID: return
-        if message.author.id in self.whitelistedUsers: return
+        if not self.checkIfAllowedChannel(message.channel.id): return
+        if self.checkIfAllowedUser(message.author.id): return
+
+        if not len(message.content.splitlines()) >= 4:
+            await self.delete_message(message)
+            return
 
         try:
             nameRealm = message.content.splitlines()[0].replace(" ", "").split(":", 1)[1].split("-")
             name = nameRealm[0].title()
             realm = nameRealm[1].title()
         except:
-            await message.author.send(f"Please use the correct format given in the pins when trying to apply.")
-            await message.delete()
+            await self.delete_message(message)
             return
 
         await message.add_reaction(self.legendaryEmoji)
@@ -119,6 +121,10 @@ class Applications(commands.Cog):
         await message.add_reaction(self.declineEmoji)
 
         await self.client.process_commands(message)
+
+    async def delete_message(self, message):
+        await message.author.send(f"Please use the correct format given in the pins when trying to apply.")
+        await message.delete()
 
 def setup(client):
     client.add_cog(Applications(client))
