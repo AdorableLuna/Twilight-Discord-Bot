@@ -8,9 +8,10 @@ class Balance(Maincog):
 
     def __init__(self, client):
         Maincog.__init__(self, client, whitelistedChannels = [756884303580758086])
+        self.client.loop.create_task(self.on_ready_init())
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready_init(self):
+        await self.client.wait_until_ready()
         self.paydayEmoji = self.client.get_emoji(758740464567713823)
 
     @commands.command()

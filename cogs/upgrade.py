@@ -9,9 +9,10 @@ class Upgrade(Maincog):
 
     def __init__(self, client):
         Maincog.__init__(self, client, whitelistedChannels = [728967077381275658])
+        self.client.loop.create_task(self.on_ready_init())
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready_init(self):
+        await self.client.wait_until_ready()
         self.tankEmoji = self.client.get_emoji(714930608266018859)
         self.healerEmoji = self.client.get_emoji(714930600267612181)
         self.dpsEmoji = self.client.get_emoji(714930578461425724)

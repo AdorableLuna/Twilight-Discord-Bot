@@ -59,9 +59,10 @@ class Completed(Maincog):
                 "management": 11.5
             }
         }
+        self.client.loop.create_task(self.on_ready_init())
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready_init(self):
+        await self.client.wait_until_ready()
         self.channel = self.client.get_channel(731479403862949928)
 
     @commands.Cog.listener()

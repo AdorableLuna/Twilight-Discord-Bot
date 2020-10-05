@@ -14,11 +14,12 @@ class Applications(Maincog):
         self.epicEmoji = "\U0001F7EA"
         self.rareEmoji = "\U0001F7E6"
         self.declineEmoji = "\U0000274C"
+        self.client.loop.create_task(self.on_ready_init())
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready_init(self):
+        await self.client.wait_until_ready()
         self.twilightEmoji = self.client.get_emoji(740282389682454540)
-    
+
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         if self.checkIfUserIsItself(payload.member): return
