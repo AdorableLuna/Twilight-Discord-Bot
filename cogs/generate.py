@@ -247,6 +247,7 @@ class Generate(Maincog):
         msg = ctx.message.content[10:]
         result = [x.strip() for x in re.split(' ', msg)]
         channel = ctx.message.channel.name
+        if "boosts" not in channel: return
 
         if "horde" in channel:
             faction = "Horde"
