@@ -1,3 +1,4 @@
+import discord
 import logging
 import os
 import json
@@ -15,9 +16,12 @@ description = """
 The Twilight bot that helps advertisers, boosters and management do their job.
 """
 
+intents = discord.Intents.default()
+intents.members = True
+
 class Twilight(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix = '.', description = description)
+        super().__init__(command_prefix = '.', description = description, intents=intents)
         self.config = self.__load_config()
         self.sheet = gsheet()
         self.__load_all_extensions()
