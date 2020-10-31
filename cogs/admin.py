@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands
 
 class Admin(commands.Cog):
@@ -35,6 +36,12 @@ class Admin(commands.Cog):
             await ctx.send(f'Succesfully reloaded `{module}`')
         except commands.ExtensionError as e:
             await ctx.send(f'{e.__class__.__name__}: {e}')
+
+    @commands.command()
+    @commands.dm_only()
+    async def activity(self, ctx, *, activity):
+        if ctx.author.id == 251424390275661824:
+            await self.client.change_presence(activity=discord.Game(name=activity))
 
 def setup(client):
     client.add_cog(Admin(client))

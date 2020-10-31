@@ -22,7 +22,7 @@ intents.members = True
 class Twilight(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix = '.', description = description,
-                         intents=intents, activity=discord.Game(name="Spooktober \U0001F383"))
+                         intents=intents, activity=discord.Game(name="SL Waiting Room"))
         self.config = self.__load_config()
         self.sheet = gsheet()
         self.__load_all_extensions()
