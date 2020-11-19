@@ -39,8 +39,8 @@ class Completed(Maincog):
                 "management": 10
             },
             "legacy": {
-                "boosters": 80,
-                "advertiser": 10,
+                "boosters": 75,
+                "advertiser": 15,
                 "management": 10
             },
             "mount": {
