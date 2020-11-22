@@ -1,4 +1,6 @@
 import discord
+import re
+
 from discord.ext import commands
 
 class Admin(commands.Cog):
@@ -42,6 +44,36 @@ class Admin(commands.Cog):
     async def activity(self, ctx, *, activity):
         if ctx.author.id == 251424390275661824:
             await self.client.change_presence(activity=discord.Game(name=activity))
+
+    @commands.group(name='post', hidden=True, invoke_without_command=True)
+    @commands.has_any_role("Staff", "Management", "Council")
+    async def post(self, ctx, *, text):
+        """Posts a message."""
+        channelRegex = "<#.*?>"
+        channelIdRegex = "\d+"
+
+        channelString = re.findall(channelRegex, text)[0]
+        channelId = re.search(channelIdRegex, channelString).group()
+        channel = await self.client.fetch_channel(channelId)
+
+        if ctx.message.attachments:
+            image = await ctx.message.attachments[0].to_file()
+
+            result = text.replace(channelString, '', 1)
+            if result != '':
+                if result[0].isspace():
+                    result = result.replace(' ', '', 1)
+
+            await ctx.message.delete()
+            await channel.send(content=result, file=image)
+        else:
+            result = text.replace(channelString, '', 1)
+            if result != '':
+                if result[0].isspace():
+                    result = result.replace(' ', '', 1)
+
+                await ctx.message.delete()
+                await channel.send(result)
 
 def setup(client):
     client.add_cog(Admin(client))
