@@ -26,7 +26,7 @@ class Balance(Maincog):
         await ctx.message.channel.send(embed=embed)
 
         author = ctx.message.author
-        SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]
+        SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]["MAIN"]
         allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, "'Balance'!A2:D")
 
         if not allRows:

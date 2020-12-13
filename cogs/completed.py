@@ -271,7 +271,7 @@ class Completed(Maincog):
         else:
             RANGE_NAME = "'MISC'!A3:N"
 
-        SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]
+        SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]["MAIN"]
         allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, f"{RANGE_NAME}")
 
         if not allRows:

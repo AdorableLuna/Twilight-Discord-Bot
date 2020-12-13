@@ -1,6 +1,9 @@
 {
     "TOKEN": "",
-    "SPREADSHEET_ID": "",
+    "SPREADSHEET_ID": {
+      "MAIN": "",
+      "PRICES": ""
+    },
     "GUILD_ID": 123456789,
     "DATABASE": {
         "HOST": "",
