@@ -53,7 +53,7 @@ class Applications(Maincog):
 
                 "After careful consideration your M+ Boosting Application has been accepted within Twilight Boosting Community.\n\n"
 
-                "**1)** Head to <#700676105387901038> and pick your roles. Be sure to only pick alt roles that you are able to play near main level and able to trade 465+ gear in all slots.\n"
+                "**1)** Head to <#700676105387901038> and pick your roles. Be sure to only pick alt roles that you are able to play near main level and able to trade 210+ gear in all slots.\n"
                 "**2)** Go to <#662766480068182026> to learn our rules.\n"
                 "**3)** We do pay-outs every 2 weeks, usually on a Friday. This is done via in game mail.\n"
                 "**4)** Any offensive or abusive behaviour toward buyers, members or staff will not be tolerated.\n"
