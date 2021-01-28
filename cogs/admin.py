@@ -2,11 +2,13 @@ import discord
 import re
 
 from discord.ext import commands
+from helpers import helper
 
 class Admin(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        self.helper = helper.Helper(self.client)
         self.cogsFolder = 'cogs'
 
     @commands.group(name='load', hidden=True, invoke_without_command=True)
@@ -84,6 +86,13 @@ class Admin(commands.Cog):
         footerRows = self.client.sheet.getAllRows(SPREADSHEET_ID, f"'Footer'")[2:]
         channel = await self.client.fetch_channel(int(allRows[2][0]))
 
+        mention = ""
+        firstPost = True
+
+        if category.lower() == "deal":
+            dealMessage = self.client.sheet.getAllRows(SPREADSHEET_ID, f"'Deal Message'")[2][0]
+            mention += dealMessage + " " + self.helper.getRole(ctx.guild, "Twilight Boostee").mention
+
         # Prices
         # Start at every 3rd item in list
         for i in range(2, len(allRows), 3):
@@ -104,9 +113,11 @@ class Admin(commands.Cog):
                                 inline=allRows[i+1][j] == 'TRUE')
 
             if allRows[i][1]:
-                await channel.send(embed=imageEmbed)
+                await channel.send(content=mention if firstPost else "", embed=imageEmbed)
+                firstPost = False
 
-            await channel.send(embed=embed)
+            await channel.send(content=mention if firstPost else "", embed=embed)
+            firstPost = False
 
         # Footer
         color = int(footerRows[0][2].replace('#', '0x'), 0)
