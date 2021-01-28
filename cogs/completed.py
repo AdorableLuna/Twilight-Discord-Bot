@@ -14,9 +14,9 @@ class Completed(Maincog):
         self.doneEmoji = "\U00002705"
         self.taxes = {
             "m+": {
-                "boosters": 71.2,
-                "advertiser": 17.3,
-                "management": 11.5
+                "boosters": 70,
+                "advertiser": 20,
+                "management": 10
             },
             "pvp": {
                 "boosters": 80,
@@ -29,8 +29,8 @@ class Completed(Maincog):
                 "management": 7.5
             },
             "leveling": {
-                "boosters": 80,
-                "advertiser": 10,
+                "boosters": 70,
+                "advertiser": 20,
                 "management": 10
             },
             "ie": {
@@ -48,7 +48,7 @@ class Completed(Maincog):
                 "advertiser": 15,
                 "management": 10
             },
-            "vision": {
+            "torghast": {
                 "boosters": 75,
                 "advertiser": 15,
                 "management": 10
