@@ -45,18 +45,29 @@ class Upgrade(Maincog):
                 epicRole = self.helper.getRole(ctx.guild, "Epic")
                 legendaryRole = self.helper.getRole(ctx.guild, "Legendary")
                 highKeyRole = self.helper.getRole(ctx.guild, f"Highkey Booster {faction}")
+
+                rareRoleOld = self.helper.getRole(ctx.guild, "Rare (old)")
+                epicRoleOld = self.helper.getRole(ctx.guild, "Epic (old)")
+                legendaryRoleOld = self.helper.getRole(ctx.guild, "Legendary (old)")
+
                 role = ""
+
+                # Remove old roles
+                await author.remove_roles(rareRoleOld)
+                await author.remove_roles(epicRoleOld)
+                await author.remove_roles(legendaryRoleOld)
+                await author.remove_roles(highKeyRole)
 
                 if rareRole in userRoles and epicRole in userRoles and legendaryRole in userRoles:
                     description = "You already have all the roles."
                 else:
-                    if allScore > 2400 and faction == "Alliance" or allScore > 2500 and faction == "Horde":
+                    if allScore > 1100 and faction == "Alliance" or allScore > 1100 and faction == "Horde":
                         role = rareRole
                         await author.add_roles(role)
-                    if allScore > 2700 and faction == "Alliance" or allScore > 2900 and faction == "Horde":
+                    if allScore > 1500 and faction == "Alliance" or allScore > 1500 and faction == "Horde":
                         role = epicRole
                         await author.add_roles(role, highKeyRole)
-                    if allScore > 3500 and faction == "Alliance" or allScore > 3900 and faction == "Horde":
+                    if allScore > 1800 and faction == "Alliance" or allScore > 1800 and faction == "Horde":
                         role = legendaryRole
                         await author.add_roles(role, highKeyRole)
 
@@ -66,9 +77,9 @@ class Upgrade(Maincog):
                         description = "Your character is not yet eligible for any other roles.\n\n"
 
                     description += f"""**Required RaiderIO Score Per Rank:**
-                                   {legendaryRole.mention}: {"3500" if faction == "Alliance" else "3900"}
-                                   {epicRole.mention}: {"2700" if faction == "Alliance" else "2900"}
-                                   {rareRole.mention}: {"2400" if faction == "Alliance" else "2500"}"""
+                                   {legendaryRole.mention}: {"1800" if faction == "Alliance" else "1800"}
+                                   {epicRole.mention}: {"1500" if faction == "Alliance" else "1500"}
+                                   {rareRole.mention}: {"1100" if faction == "Alliance" else "1100"}"""
 
                 embed=discord.Embed(title=f"{data['name']}-{data['realm']}", description=description, color=0x5cf033)
                 embed.set_thumbnail(url=data["thumbnail_url"])
