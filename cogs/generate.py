@@ -313,7 +313,7 @@ class Generate(Maincog):
                 goldPot = str(goldPot) + "000"
             else:
                 goldPot = result[3]
-            boosterCut = math.ceil((int(goldPot) / 100) * 17.8)
+            boosterCut = int(goldPot) * round(((70 / 100) / 4), 3)
 
             embed = discord.Embed(title=f"Generating {result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group.\n" +
                                         "First come first served **but** the bot will **prioritise** a keyholder over those who do not have one.\n", color=0x5cf033)
@@ -522,11 +522,11 @@ class Generate(Maincog):
         else:
             factionRole = self.helper.getRole(guild, "Mplus Booster")
 
-        if keystoneLevel >= 18:
+        if keystoneLevel >= 14:
             keystoneRole = self.helper.getRole(guild, "Legendary")
-        if keystoneLevel <= 17:
+        if keystoneLevel <= 13:
             keystoneRole = self.helper.getRole(guild, "Epic")
-        if keystoneLevel <= 14:
+        if keystoneLevel <= 9:
             keystoneRole = self.helper.getRole(guild, "Rare")
 
         userRoles = data["user"].roles
