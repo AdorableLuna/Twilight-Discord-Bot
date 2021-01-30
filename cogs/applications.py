@@ -88,7 +88,17 @@ class Applications(Maincog):
 
                 display_name = f"{name}-{realm}"
 
+                # Rename booster
                 await message.author.edit(nick=display_name)
+
+                # Add booster to applications sheet
+                SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]["MAIN"]
+                allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, f"'M+ Applications'!B3:D")
+                TRUEDATA = [display_name, realm, faction]
+
+                result = self.client.sheet.add(SPREADSHEET_ID, "'M+ Applications'!B3:D", TRUEDATA)
+
+                # Send DM
                 await message.author.send(acceptedMessage)
 
             if str(payload.emoji) == str(self.declineEmoji):
@@ -97,6 +107,8 @@ class Applications(Maincog):
                 "Feel free to apply again once you meet the requirements. Contact anyone from management or simply open a support ticket for further inquiries.")
 
                 await message.author.send(declineMessage)
+
+            await message.delete()
 
     @commands.Cog.listener()
     async def on_message(self, message):
