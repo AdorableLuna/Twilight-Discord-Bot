@@ -11,8 +11,13 @@ class Admin(commands.Cog):
         self.helper = helper.Helper(self.client)
         self.cogsFolder = 'cogs'
 
+    def is_developer():
+        def predicate(ctx):
+            return ctx.message.author.id == 251424390275661824
+        return commands.check(predicate)
+
     @commands.group(name='load', hidden=True, invoke_without_command=True)
-    @commands.has_any_role("Staff", "Management", "Council")
+    @is_developer()
     async def load(self, ctx, *, module):
         """Loads a module."""
         try:
@@ -22,7 +27,7 @@ class Admin(commands.Cog):
             await ctx.send(f'{e.__class__.__name__}: {e}')
 
     @commands.group(name='unload', hidden=True, invoke_without_command=True)
-    @commands.has_any_role("Staff", "Management", "Council")
+    @is_developer()
     async def unload(self, ctx, *, module):
         """Unloads a module."""
         try:
@@ -32,7 +37,7 @@ class Admin(commands.Cog):
             await ctx.send(f'{e.__class__.__name__}: {e}')
 
     @commands.group(name='reload', hidden=True, invoke_without_command=True)
-    @commands.has_any_role("Staff", "Management", "Council")
+    @is_developer()
     async def reload(self, ctx, *, module):
         """Reloads a module."""
         try:

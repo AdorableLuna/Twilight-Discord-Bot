@@ -44,6 +44,8 @@ class Twilight(commands.Bot):
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CommandNotFound):
             return
+        if isinstance(error, commands.CheckFailure):
+            return
         if isinstance(error, commands.CommandInvokeError):
             if isinstance(error.original, discord.Forbidden):
                 await ctx.send(f'{ctx.author.mention}, the message could not be delivered. This is usually because of a setting regarding direct messages. Please check the following Discord support link for more support.\n https://support.discord.com/hc/en-us/articles/360060145013')
