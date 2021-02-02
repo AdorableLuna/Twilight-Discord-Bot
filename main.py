@@ -22,7 +22,7 @@ intents.members = True
 class Twilight(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix = '.', description = description,
-                         intents=intents, activity=discord.Game(name="SL Waiting Room"))
+                         intents=intents, activity=discord.Game(name="World of Warcraft"))
         self.config = self.__load_config()
         self.sheet = gsheet()
         self.__load_all_extensions()
@@ -44,6 +44,11 @@ class Twilight(commands.Bot):
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CommandNotFound):
             return
+        if isinstance(error, commands.CommandInvokeError):
+            if isinstance(error.original, discord.Forbidden):
+                await ctx.send(f'{ctx.author.mention}, the message could not be delivered. This is usually because of a setting regarding direct messages. Please check the following Discord support link for more support.\n https://support.discord.com/hc/en-us/articles/360060145013')
+                log.error(f"Command: {ctx.command.name} | {error}")
+                return
 
         await ctx.send(f'{ctx.author.mention}, there was an error with your command. Please check if your command has the correct format, otherwise notify the staff.')
         log.error(f"Command: {ctx.command.name} | {error}")
