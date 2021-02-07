@@ -56,7 +56,10 @@ class Upgrade(Maincog):
                 await author.remove_roles(rareRoleOld)
                 await author.remove_roles(epicRoleOld)
                 await author.remove_roles(legendaryRoleOld)
-                await author.remove_roles(highKeyRole)
+
+                # Remove highkey role if not epic or legendary
+                if epicRole not in userRoles:
+                    await author.remove_roles(highKeyRole)
 
                 if rareRole in userRoles and epicRole in userRoles and legendaryRole in userRoles:
                     description = "You already have all the roles."
