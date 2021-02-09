@@ -96,7 +96,7 @@ class Admin(commands.Cog):
 
         if category.lower() == "deal":
             dealMessage = self.client.sheet.getAllRows(SPREADSHEET_ID, f"'Deal Message'")[2][0]
-            mention += dealMessage + " " + self.helper.getRole(ctx.guild, "Twilight Boostee").mention
+            mention += dealMessage + " @everyone"
 
         # Prices
         # Start at every 3rd item in list
@@ -140,6 +140,34 @@ class Admin(commands.Cog):
                             inline=footerRows[0][k] == 'TRUE')
 
         await channel.send(embed=footerEmbed)
+        await ctx.message.delete()
+
+    @commands.group(name='editDeals', hidden=True, invoke_without_command=True)
+    @commands.has_any_role("Council")
+    async def editDeals(self, ctx, *, message_id):
+        """Updates the prices."""
+        SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]["PRICES"]
+        allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, f"'Deal Pricelist'")
+
+        dealMessage = self.client.sheet.getAllRows(SPREADSHEET_ID, f"'Deal Message'")[2][0]
+        mention = dealMessage + " " + self.helper.getRole(ctx.guild, "Twilight Boostee").mention
+        message = await ctx.fetch_message(message_id)
+
+        # Prices
+        # Start at 3rd item in list
+        color = int(allRows[2][3].replace('#', '0x'), 0)
+
+        embed = discord.Embed(color=color, title=allRows[2][4])
+
+        if allRows[2][2]:
+            embed.set_image(url=allRows[2][2])
+
+        for j in range(5, len(allRows[2]), 2):
+            embed.add_field(name=''.join(allRows[2][j].replace(r'\n', '\n')) or '\u200b',
+                            value=''.join(allRows[2][j+1].replace(r'\n', '\n')) or '\u200b',
+                            inline=allRows[2+1][j] == 'TRUE')
+
+        await message.edit(content=mention, embed=embed)
         await ctx.message.delete()
 
 def setup(client):
