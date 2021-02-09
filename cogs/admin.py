@@ -150,7 +150,7 @@ class Admin(commands.Cog):
         allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, f"'Deal Pricelist'")
 
         dealMessage = self.client.sheet.getAllRows(SPREADSHEET_ID, f"'Deal Message'")[2][0]
-        mention = dealMessage + " " + self.helper.getRole(ctx.guild, "Twilight Boostee").mention
+        mention = dealMessage + " @everyone"
         message = await ctx.fetch_message(message_id)
 
         # Prices
