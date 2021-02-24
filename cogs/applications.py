@@ -44,7 +44,7 @@ class Applications(Maincog):
         boosteeRole = self.helper.getRole(guild, "Twilight Boostee")
         boosterRole = self.helper.getRole(guild, "Twilight Booster")
 
-        if councilRole in userRoles:
+        if self.checkIfAllowedUser(payload.member.id):
             if str(payload.emoji) == str(self.legendaryEmoji) or str(payload.emoji) == str(self.epicEmoji) or str(payload.emoji) == str(self.rareEmoji):
                 await message.author.remove_roles(boosteeRole)
                 await message.author.add_roles(boosterRole, mplusBoosterRole, mplusBoosterFactionRole)
