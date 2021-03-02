@@ -84,9 +84,10 @@ class Admin(commands.Cog):
 
     @commands.group(name='editPost', hidden=True, invoke_without_command=True)
     @commands.has_any_role("Council")
-    async def editPost(self, ctx, message_id, *, text):
+    async def editPost(self, ctx, channel_id, message_id, *, text):
         """Updates the post."""
-        message = await ctx.fetch_message(message_id)
+        channel = await self.client.fetch_channel(channel_id)
+        message = await channel.fetch_message(message_id)
 
         await message.edit(content=text)
         await ctx.message.delete()
