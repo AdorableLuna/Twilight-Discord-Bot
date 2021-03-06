@@ -158,7 +158,7 @@ class Completed(Maincog):
             pot = DATA[1]
         epot = int(pot)
 
-        realmFaction = DATA[2].split("-", 1)
+        realmFaction = DATA[2].rsplit("-", 1)
         try:
             potrealm = realmFaction[0]
             faction = "Horde" if realmFaction[1].lower() == 'h' else 'Alliance'

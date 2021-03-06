@@ -81,10 +81,27 @@ class Generate(Maincog):
 
         if group["created"]:
             if str(payload.emoji) == str(self.doneEmoji) and user.mention == author:
-                if "horde" in channel.name:
-                    faction = "H"
-                elif "alliance" in channel.name:
-                    faction = "A"
+                realmFaction = group['payment_realm'].rsplit("-", 1)
+
+                # If faction is specified, then overwrite the default channel faction
+                if(len(realmFaction) == 2):
+                    if "horde" in realmFaction[1].lower():
+                        faction = "H"
+                    elif "h" in realmFaction[1].lower():
+                        faction = "H"
+                    elif "alliance" in realmFaction[1].lower():
+                        faction = "A"
+                    elif "a" in realmFaction[1].lower():
+                        faction = "A"
+                
+                # Otherwise, just use default channel faction
+                else:
+                    if "horde" in channel.name:
+                        faction = "H"
+                    elif "alliance" in channel.name:
+                        faction = "A"
+
+                paymentRealm = realmFaction[0]
 
                 gold_pot = group["gold_pot"]
                 if "k" in gold_pot:
@@ -97,7 +114,7 @@ class Generate(Maincog):
 
                 ctx = await self.client.get_context(message)
                 ctx.author = get(ctx.guild.members, mention=author)
-                result = await ctx.invoke(self.client.get_command('completed'), 'M+', gold_pot, f"{group['payment_realm']}-{faction}", author, party[0], party[1], party[2], party[3])
+                result = await ctx.invoke(self.client.get_command('completed'), 'M+', gold_pot, f"{paymentRealm}-{faction}", author, party[0], party[1], party[2], party[3])
 
                 if result[0]:
                     await channel.send(f"{self.doneEmoji} Succesfully added the Mythic+ run to the sheets!\n"
