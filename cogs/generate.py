@@ -42,6 +42,9 @@ class Generate(Maincog):
             "Mail",
             "Plate"
         ]
+        self.legendaryKeystoneLevel = 16
+        self.epicKeystoneLevel = 15
+        self.rareKeystoneLevel = 13
         self.client.loop.create_task(self.on_ready_init())
 
     async def on_ready_init(self):
@@ -285,7 +288,7 @@ class Generate(Maincog):
 
             advertiserNote = ""
             additionalRoles = []
-            if keystoneLevel < 18:
+            if keystoneLevel < self.legendaryKeystoneLevel:
                 for x in range(6, len(result)):
                     if self.helper.containsRoleMention(result[x]):
                         mentions += result[x] + " "
@@ -294,7 +297,7 @@ class Generate(Maincog):
                         advertiserNote += result[x] + " "
 
             if not additionalRoles:
-                if keystoneLevel < 18 and result[5] != "Any":
+                if keystoneLevel < self.legendaryKeystoneLevel and result[5] != "Any":
                     if result[5] == "Cloth" or result[5] == "Mail":
                         tankRole = self.helper.getRole(ctx.guild, "Tank").mention
                         mentions += tankRole + " "
@@ -303,17 +306,17 @@ class Generate(Maincog):
                 else:
                     armor = "Any"
 
-                    if keystoneLevel >= 18:
+                    if keystoneLevel >= self.legendaryKeystoneLevel:
                         keystoneRole = self.helper.getRole(ctx.guild, "Legendary").mention
                         mentions += keystoneRole + " "
                     else:
-                        if keystoneLevel >= 15 and keystoneLevel < 18:
+                        if keystoneLevel >= self.epicKeystoneLevel and keystoneLevel < self.legendaryKeystoneLevel:
                             if faction == "Horde":
                                 keystoneRole = self.helper.getRole(ctx.guild, "Highkey Booster Horde").mention
                             elif faction == "Alliance":
                                 keystoneRole = self.helper.getRole(ctx.guild, "Highkey Booster Alliance").mention
                             mentions += keystoneRole + " "
-                        elif keystoneLevel >= 10 and keystoneLevel <= 14:
+                        elif keystoneLevel >= self.rareKeystoneLevel and keystoneLevel <= self.epicKeystoneLevel:
                             keystoneRole = self.helper.getRole(ctx.guild, "Mplus Booster").mention
                             mentions += keystoneRole + " "
 
@@ -531,7 +534,7 @@ class Generate(Maincog):
         isValid = False
         keystoneLevel = int(data["keystone_level"].partition("+")[2])
 
-        if keystoneLevel >= 15:
+        if keystoneLevel >= self.legendaryKeystoneLevel:
             if data["faction"] == "Horde":
                 factionRole = self.helper.getRole(guild, "Highkey Booster Horde")
             elif data["faction"] == "Alliance":
@@ -539,11 +542,11 @@ class Generate(Maincog):
         else:
             factionRole = self.helper.getRole(guild, "Mplus Booster")
 
-        if keystoneLevel >= 14:
+        if keystoneLevel >= self.legendaryKeystoneLevel:
             keystoneRole = self.helper.getRole(guild, "Legendary")
-        if keystoneLevel <= 13:
+        if keystoneLevel <= self.epicKeystoneLevel:
             keystoneRole = self.helper.getRole(guild, "Epic")
-        if keystoneLevel <= 9:
+        if keystoneLevel <= self.rareKeystoneLevel:
             keystoneRole = self.helper.getRole(guild, "Rare")
 
         userRoles = data["user"].roles
