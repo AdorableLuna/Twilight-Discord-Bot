@@ -93,7 +93,7 @@ class Generate(Maincog):
                         faction = "A"
                     elif "a" in realmFaction[1].lower():
                         faction = "A"
-                
+
                 # Otherwise, just use default channel faction
                 else:
                     if "horde" in channel.name:
@@ -568,20 +568,20 @@ class Generate(Maincog):
                         break
 
             if not isValid:
-                await channel.send(f"{data['user'].mention}, you do **NOT** have any of the required {allRoles[:-2]} role(s) to join this group.")
+                await data['user'].send(f"You do **NOT** have any of the required {allRoles[:-2]} role(s) to join this group. Head to <#700676105387901038> and pick your roles.")
                 return False
 
 
         if factionRole in userRoles:
             isValid = True
         else:
-            await channel.send(f"{data['user'].mention}, you do **NOT** have the required `{factionRole}` role to join this group.")
+            await data['user'].send(f"You do **NOT** have the required `{factionRole}` role to join this group. Please open a ticket regarding the faction role.")
             return False
 
         if keystoneRole in userRoles:
             isValid = True
         else:
-            await channel.send(f"{data['user'].mention}, you do **NOT** have the required `{keystoneRole}` role to join this group.")
+            await data['user'].send(f"You do **NOT** have the required `{keystoneRole}` role to join this group. Head to <#728994402122465330> and upgrade your roles.")
             return False
 
         if data["role"] != "Any" and data["role"] != "All":
@@ -589,7 +589,7 @@ class Generate(Maincog):
             if role in userRoles:
                 isValid = True
             else:
-                await channel.send(f"{data['user'].mention}, you do **NOT** have the required `{role}` role to join this group.")
+                await data['user'].send(f"You do **NOT** have the required `{role}` role to join this group. Head to <#700676105387901038> and pick your roles.")
                 return False
 
         if data["armor_type"] != "Any":
@@ -606,7 +606,7 @@ class Generate(Maincog):
                 if armorRole in userRoles:
                     isValid = True
                 else:
-                    await channel.send(f"{data['user'].mention}, you do **NOT** have the required `{armorRole}` role to join this group.")
+                    await data['user'].send(f"You do **NOT** have the required `{armorRole}` role to join this group. Head to <#700676105387901038> and pick your roles.")
                     return False
 
         if "team" in data:
@@ -614,7 +614,7 @@ class Generate(Maincog):
             if teamRole in userRoles:
                 isValid = True
             else:
-                await channel.send(f"{data['user'].mention}, you do **NOT** have the required `{teamRole}` role to join this group.")
+                await data['user'].send(f"You do **NOT** have the required `{teamRole}` role to join this group. However, if you are in a team, then your team leader must sign.")
                 return False
 
         return isValid
