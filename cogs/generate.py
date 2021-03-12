@@ -527,14 +527,15 @@ class Generate(Maincog):
         for reaction in reactions[:]:
             await reaction.clear()
 
-        # Done
-        await message.add_reaction(self.doneEmoji)
+        # Done if group is not a team
+        if not team:
+            await message.add_reaction(self.doneEmoji)
 
     async def checkRoles(self, guild, channel, data):
         isValid = False
         keystoneLevel = int(data["keystone_level"].partition("+")[2])
 
-        if keystoneLevel >= self.legendaryKeystoneLevel:
+        if keystoneLevel >= self.epicKeystoneLevel:
             if data["faction"] == "Horde":
                 factionRole = self.helper.getRole(guild, "Highkey Booster Horde")
             elif data["faction"] == "Alliance":
