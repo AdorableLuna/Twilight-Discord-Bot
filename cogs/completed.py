@@ -1,4 +1,5 @@
 import discord
+import json
 import re
 
 from cogs.maincog import Maincog
@@ -12,53 +13,11 @@ class Completed(Maincog):
         Maincog.__init__(self, client, whitelistedChannels = [731479403862949928])
         self.cancelEmoji = "\U0000274C"
         self.doneEmoji = "\U00002705"
-        self.taxes = {
-            "m+": {
-                "boosters": 70,
-                "advertiser": 20,
-                "management": 10
-            },
-            "pvp": {
-                "boosters": 80,
-                "advertiser": 10,
-                "management": 10
-            },
-            "glad_pvp": {
-                "boosters": 85,
-                "advertiser": 7.5,
-                "management": 7.5
-            },
-            "leveling": {
-                "boosters": 70,
-                "advertiser": 20,
-                "management": 10
-            },
-            "ie": {
-                "boosters": 80,
-                "advertiser": 10,
-                "management": 10
-            },
-            "legacy": {
-                "boosters": 75,
-                "advertiser": 15,
-                "management": 10
-            },
-            "mount": {
-                "boosters": 75,
-                "advertiser": 15,
-                "management": 10
-            },
-            "torghast": {
-                "boosters": 75,
-                "advertiser": 15,
-                "management": 10
-            },
-            "duo": {
-                "boosters": 71.2,
-                "advertiser": 17.3,
-                "management": 11.5
-            }
-        }
+
+        with open('taxes.json', 'r') as taxesFile:
+            self.taxes = json.load(taxesFile)
+            taxesFile.close()
+
         self.client.loop.create_task(self.on_ready_init())
 
     async def on_ready_init(self):

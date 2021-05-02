@@ -1,4 +1,5 @@
 import discord
+import json
 import re
 
 from discord.ext import commands
@@ -179,6 +180,46 @@ class Admin(commands.Cog):
 
         await message.edit(content=mention, embed=embed)
         await ctx.message.delete()
+
+    @commands.group(name='getCuts', hidden=True, invoke_without_command=True)
+    @commands.has_any_role("Council")
+    async def getCuts(self, ctx):
+        with open('taxes.json', 'r') as taxesFile:
+            taxes = json.load(taxesFile)
+            taxesFile.close()
+
+            message = ''
+
+            for (k, v) in taxes.items():
+                message += f'**{k}**\n'
+
+                for (sk, sv) in taxes[k].items():
+                    message += f'{sk}: {str(sv)}%\n'
+
+                message += '\n'
+
+            await ctx.send(message)
+
+    @commands.group(name='updateCuts', hidden=True, invoke_without_command=True)
+    @commands.has_any_role("Council")
+    async def updateCuts(self, ctx, category, type, tax):
+        with open('taxes.json', 'r') as taxesFile:
+            taxes = json.load(taxesFile)
+            taxesFile.close()
+
+            try:
+                taxes[category.lower()][type.lower()] = float(tax)
+
+                with open('taxes.json', 'w') as taxesFile:
+                    json.dump(taxes, taxesFile)
+                    taxesFile.close()
+
+                    await ctx.invoke(self.client.get_command('reload'), module='completed')
+                    await ctx.invoke(self.client.get_command('reload'), module='generate')
+                    await ctx.send(f'Succesfully updated {category} {type} cut to {tax}%.')
+            except Exception as e:
+                print(f'Failed to update cut.', e)
+                await ctx.send(f'{ctx.author.mention}, please use an existing category with a corresponding type and a cut amount (without % sign).')
 
 def setup(client):
     client.add_cog(Admin(client))

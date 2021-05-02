@@ -5,6 +5,7 @@ import time
 import itertools
 import math
 import locale
+import json
 
 from cogs.maincog import Maincog
 from discord.utils import get
@@ -45,6 +46,11 @@ class Generate(Maincog):
         self.legendaryKeystoneLevel = 16
         self.epicKeystoneLevel = 15
         self.rareKeystoneLevel = 13
+
+        with open('taxes.json', 'r') as taxesFile:
+            self.taxes = json.load(taxesFile)
+            taxesFile.close()
+
         self.client.loop.create_task(self.on_ready_init())
 
     async def on_ready_init(self):
@@ -333,7 +339,7 @@ class Generate(Maincog):
                 goldPot = str(goldPot) + "000"
             else:
                 goldPot = result[3]
-            boosterCut = int(goldPot) * round(((70 / 100) / 4), 3)
+            boosterCut = int(goldPot) * round(((self.taxes["m+"]["boosters"] / 100) / 4), 3)
 
             embed = discord.Embed(title=f"Generating {result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group.\n" +
                                         "First come first served **but** the bot will **prioritise** a keyholder over those who do not have one.\n", color=0x5cf033)
