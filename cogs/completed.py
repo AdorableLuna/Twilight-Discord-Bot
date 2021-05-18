@@ -93,7 +93,7 @@ class Completed(Maincog):
 
                 TRUEDATA.append(created_at)
                 TRUEDATA.append(next((field.value for field in fields if field.name == 'Faction of the Boost')))
-                
+
                 if type == 'M+':
                     TRUEDATA.append(re.search(reg_exp, keyholder[1])[1])
 
@@ -107,31 +107,32 @@ class Completed(Maincog):
                     await self.channel.send(embed=message.embeds[0])
 
     @commands.command()
-    async def completed(self, ctx, *args):
+    async def completed(self, ctx):
         if ctx.message.channel == self.channel:
             invoked = False
             await self.channel.send('This boost has been processed by our bot.', delete_after=5.0)
         else:
             invoked = True
 
+        msg = ctx.message.content[11:]
+        result = [x.strip() for x in msg.split()]
         created_at = datetime.now(timezone('Europe/Paris')).strftime("%d-%m %H:%M:%S")
-        DATA = args
-        if DATA[0].islower():
-            type = DATA[0].title()
+        if result[0].islower():
+            type = result[0].title()
         else:
-            type = DATA[0]
+            type = result[0]
 
-        boostFaction = DATA[1].capitalize()
-        pot = DATA[2].lower()
+        boostFaction = result[1].capitalize()
+        pot = result[2].lower()
 
         if "k" in pot:
             pot = pot.replace('k', '')
             pot = str(pot) + "000"
         else:
-            pot = DATA[2]
+            pot = result[2]
         epot = int(pot)
 
-        realmFaction = DATA[3].rsplit("-", 1)
+        realmFaction = result[3].rsplit("-", 1)
         try:
             potrealm = realmFaction[0]
             faction = "Horde" if realmFaction[1].lower() == 'h' else 'Alliance'
@@ -139,25 +140,25 @@ class Completed(Maincog):
             raise commands.BadArgument("Realm or faction is not defined.")
 
         author = ctx.author
-        eadv = DATA[4]
-        eb1 = DATA[5]
+        eadv = result[4]
+        eb1 = result[5]
         totalBoosters = 1
 
         if self.helper.containsUserMention(potrealm):
             raise commands.BadArgument("Realm is not defined.")
 
         try:
-            eb2 = DATA[6]
+            eb2 = result[6]
             totalBoosters += 1
         except:
             eb2 = ""
         try:
-            eb3 = DATA[7]
+            eb3 = result[7]
             totalBoosters += 1
         except:
             eb3 = ""
         try:
-            eb4 = DATA[8]
+            eb4 = result[8]
             totalBoosters += 1
         except:
             eb4 = ""
@@ -188,7 +189,7 @@ class Completed(Maincog):
         if eb4:
             embed.add_field(name="Booster 4", value=f"{eb4} {'' if invoked else f'({booster4})'}", inline=False)
         if type == 'M+':
-            kh = DATA[9]
+            kh = result[9]
             keyholder = self.helper.checkName(ctx.guild, kh)
             embed.add_field(name="Keyholder", value=f"{kh} {'' if invoked else f'({keyholder})'}", inline=False)
         embed.add_field(name="Gold Pot", value=format(epot,',d'), inline=False)

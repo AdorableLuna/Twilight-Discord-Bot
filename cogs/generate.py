@@ -315,7 +315,7 @@ class Generate(Maincog):
     @commands.has_any_role("Trainee Advertiser", "Advertiser", "Management", "Council")
     async def generate(self, ctx):
         msg = ctx.message.content[10:]
-        result = [x.strip() for x in re.split(' ', msg)]
+        result = [x.strip() for x in msg.split()]
         channel = ctx.message.channel.name
         if "boost" not in channel: return
 
