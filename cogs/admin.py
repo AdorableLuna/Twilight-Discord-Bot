@@ -12,6 +12,13 @@ class Admin(commands.Cog):
         self.helper = helper.Helper(self.client)
         self.cogsFolder = 'cogs'
 
+        self.client.loop.create_task(self.on_ready_init())
+
+    async def on_ready_init(self):
+        await self.client.wait_until_ready()
+        self.hordeEmoji = self.client.get_emoji(843829365799911455)
+        self.allianceEmoji = self.client.get_emoji(843829376486998037)
+
     def is_developer():
         def predicate(ctx):
             return ctx.message.author.id == 251424390275661824
@@ -220,6 +227,16 @@ class Admin(commands.Cog):
             except Exception as e:
                 print(f'Failed to update cut.', e)
                 await ctx.send(f'{ctx.author.mention}, please use an existing category with a corresponding type and a cut amount (without % sign).')
+
+    @commands.group(name='bookings', hidden=True, invoke_without_command=True)
+    @commands.has_any_role("Council")
+    async def bookings(self, ctx):
+        embed = discord.Embed(title="M+ Boost", description="Click the emoji's below to book a run.", color=0x5cf033)
+        msg = await ctx.channel.send(embed=embed)
+
+        await msg.add_reaction(self.hordeEmoji)
+        await msg.add_reaction(self.allianceEmoji)
+        await ctx.message.delete()
 
 def setup(client):
     client.add_cog(Admin(client))
