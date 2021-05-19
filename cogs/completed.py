@@ -107,14 +107,14 @@ class Completed(Maincog):
                     await self.channel.send(embed=message.embeds[0])
 
     @commands.command()
-    async def completed(self, ctx):
+    async def completed(self, ctx, *args):
         if ctx.message.channel == self.channel:
             invoked = False
             await self.channel.send('This boost has been processed by our bot.', delete_after=5.0)
         else:
             invoked = True
 
-        msg = ctx.message.content[11:]
+        msg = ' '.join(args)
         result = [x.strip() for x in msg.split()]
         created_at = datetime.now(timezone('Europe/Paris')).strftime("%d-%m %H:%M:%S")
         if result[0].islower():

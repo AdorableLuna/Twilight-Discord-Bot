@@ -66,6 +66,14 @@ class Generate(Maincog):
         self.hordeEmoji = self.client.get_emoji(843829365799911455)
         self.allianceEmoji = self.client.get_emoji(843829376486998037)
 
+    def check_if_pre_boost_channel(self, channel_name):
+        reg = re.compile("new-mplus-.*-boost")
+        return re.match(reg, channel_name)
+
+    def check_if_active_boost_channel(self, channel_name):
+        reg = re.compile(".*-.*-.*-.*-boost")
+        return re.match(reg, channel_name)
+
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         if self.checkIfUserIsItself(payload.member): return
@@ -83,26 +91,23 @@ class Generate(Maincog):
 
         # Remove new boost channel which is only viewable by the advertiser and staff
         if str(payload.emoji) == str(self.trashEmoji):
-            reg = re.compile("new-mplus-.*-boost")
-            if bool(re.match(reg, channel.name)):
+            if self.check_if_pre_boost_channel(channel.name):
                 await channel.delete()
                 return
 
-            reg = re.compile(".*-.*-.*-.*-boost")
-            if bool(re.match(reg, channel.name)):
+            if self.check_if_active_boost_channel(channel.name):
                 messages = await channel.history().flatten()
                 group_id = next((x.id for x in messages if x.embeds), None)
 
-                groupQuery = f"SELECT * FROM mythicplus.group WHERE id = '{group_id}'"
-                group = self.dbc.select(groupQuery)
-                author = group["advertiser"]
-                author = author.split(" ", 1)[0]
+                groupQuery = f"SELECT `advertiser` FROM mythicplus.group WHERE id = '{group_id}'"
+                author = self.dbc.select(groupQuery)
+                author = author["advertiser"].split(" ", 1)[0]
 
                 if user.mention == author:
                     await channel.delete()
                 return
 
-        if "boost" not in channel.name: return
+        if not self.check_if_active_boost_channel(channel.name): return
         message = await channel.fetch_message(payload.message_id)
 
         if not message.embeds: return
@@ -268,9 +273,8 @@ class Generate(Maincog):
 
         if str(payload.emoji) == str(self.cancelEmoji):
             if user.mention == author:
-                await message.delete()
                 await message.channel.delete()
-                await self.cancelGroup(message)
+                await self.cancelGroup(guild, message)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
@@ -281,7 +285,7 @@ class Generate(Maincog):
         user = guild.get_member(payload.user_id)
         if self.checkIfUserIsItself(user): return
 
-        if "boost" not in channel.name: return
+        if not self.check_if_active_boost_channel(channel.name): return
         message = await channel.fetch_message(payload.message_id)
 
         if not message.embeds: return
@@ -314,10 +318,11 @@ class Generate(Maincog):
     @commands.command()
     @commands.has_any_role("Trainee Advertiser", "Advertiser", "Management", "Council")
     async def generate(self, ctx):
+        channel = ctx.message.channel.name
+        if not self.check_if_pre_boost_channel(channel): return
+
         msg = ctx.message.content[10:]
         result = [x.strip() for x in msg.split()]
-        channel = ctx.message.channel.name
-        if "boost" not in channel: return
 
         if "horde" in channel:
             faction = "Horde"
@@ -360,10 +365,7 @@ class Generate(Maincog):
                         mentions += keystoneRole + " "
                     else:
                         if keystoneLevel >= self.epicKeystoneLevel and keystoneLevel < self.legendaryKeystoneLevel:
-                            if faction == "Horde":
-                                keystoneRole = self.helper.getRole(ctx.guild, "Highkey Booster Horde").mention
-                            elif faction == "Alliance":
-                                keystoneRole = self.helper.getRole(ctx.guild, "Highkey Booster Alliance").mention
+                            keystoneRole = self.helper.getRole(ctx.guild, f"Highkey Booster {faction}").mention
                             mentions += keystoneRole + " "
                         elif keystoneLevel >= self.rareKeystoneLevel and keystoneLevel <= self.epicKeystoneLevel:
                             keystoneRole = self.helper.getRole(ctx.guild, "Mplus Booster").mention
@@ -385,6 +387,7 @@ class Generate(Maincog):
             boosterCut = int(goldPot) * round(((self.taxes["m+"]["boosters"] / 100) / 4), 3)
             advertiserCut = int(goldPot) * round(((self.taxes["m+"]["advertiser"] / 100)), 3)
             managementCut = int(goldPot) * round(((self.taxes["m+"]["management"] / 100)), 3)
+            keyholderCut = int(goldPot) * round((self.taxes["m+"]["keyholder"] / 100), 3)
 
             embed = discord.Embed(title=f"Generating {result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group.\n" +
                                         "First come first served **but** the bot will **prioritise** a keyholder over those who do not have one.\n", color=0x5cf033)
@@ -393,19 +396,24 @@ class Generate(Maincog):
             embed.add_field(name="Booster Cut", value=f"{boosterCut:n}", inline=True)
             embed.add_field(name="Advertiser Cut", value=f"{advertiserCut:n}", inline=True)
             embed.add_field(name="Management Cut", value=f"{managementCut:n}", inline=True)
+            embed.add_field(name="Keyholder Cut", value=f"{keyholderCut:n}", inline=True)
             embed.add_field(name="Boost Faction", value=f"{faction}", inline=True)
             embed.add_field(name="Payment Realm", value=result[1], inline=True)
             embed.add_field(name="Keystone Level", value=result[2], inline=True)
             embed.add_field(name="Dungeon", value=result[4], inline=True)
             embed.add_field(name="Armor Type", value=armor, inline=True)
-            embed.add_field(name="Advertiser", value=advertiser)
+            embed.add_field(name="Advertiser", value=advertiser, inline=False)
 
             if advertiserNote:
                 embed.add_field(name="Advertiser Note", value=advertiserNote, inline=False)
 
             await ctx.message.delete()
 
-            keystoneRole = self.getKeystoneRole(ctx.guild, keystoneLevel)
+            if keystoneLevel >= self.epicKeystoneLevel:
+                keystoneRole = self.helper.getRole(ctx.guild, f"Highkey Booster {faction}")
+            elif keystoneLevel >= self.rareKeystoneLevel and keystoneLevel <= self.epicKeystoneLevel:
+                keystoneRole = self.helper.getRole(ctx.guild, f"Mplus {faction}")
+
             category = discord.utils.get(ctx.guild.categories, id=self.mplusCategory)
             overwrites = {
                 ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
@@ -453,17 +461,12 @@ class Generate(Maincog):
             # Needs more/less fields
             await ctx.message.channel.send(':x: The command you have entered is invalid. Please check if the command you entered is valid. :x:', delete_after=10.0)
 
-    async def cancelGroup(self, message):
-        group = list(dict.fromkeys(self.getGroup(message)))
-        mentions = ""
+    async def cancelGroup(self, guild, message):
+        group = list(dict.fromkeys(filter(None, self.getGroup(message))))
 
         for i in range(len(group)):
-            mentions += group[i]
-
-        if mentions:
-            createdMessage = (f"{mentions}\n" +
-                      f"Your group was cancelled by the advertiser.\n")
-            await message.channel.send(createdMessage)
+            user = self.helper.getMemberByMention(guild, group[i])
+            await user.send("Your group was cancelled by the advertiser.")
 
     async def updateGroup(self, message):
         group = self.getGroup(message)
@@ -574,7 +577,7 @@ class Generate(Maincog):
         query = f"SELECT keystone_level FROM mythicplus.group WHERE id = '{message.id}'"
         group = self.dbc.select(query)
 
-        advertiser = embed.fields[9].value.split(" ", 1)
+        advertiser = embed.fields[10].value.split(" ", 1)
         advertiserCharacter = re.findall('\(([^)]+)', advertiser[1])[0]
 
         embed.title = f"Generated {group['keystone_level']} Group"
@@ -710,7 +713,21 @@ class Generate(Maincog):
         }
 
         boost_channel = await guild.create_text_channel(f"new-mplus-{'horde' if str(payload.emoji) == str(self.hordeEmoji) else 'alliance'}-boost", overwrites=overwrites, category=category)
-        msg = await boost_channel.send(f"{payload.member.mention}\n\n`.generate Name-Server Server-H/A 1x+15 ---k Any Any`\n\nClick {self.trashEmoji} to delete this channel.")
+        msg = await boost_channel.send(
+        (f"{payload.member.mention}\n\n```.generate Name-Server Server-H/A 1x+15 ---k Any Any [Notes] [Extra Pings]```"
+        "or"
+        "```\n"
+        ".generate\n"
+        "Name-Server\n"
+        "Server-H/A\n"
+        "1x+15\n"
+        "---k\n"
+        "Any\n"
+        "Any\n"
+        "[Notes]\n"
+        "[Extra Pings]```\n"
+
+        f"Click {self.trashEmoji} to delete this channel."))
         await msg.add_reaction(self.trashEmoji)
 
 def setup(client):
