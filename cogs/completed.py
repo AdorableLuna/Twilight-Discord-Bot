@@ -175,10 +175,13 @@ class Completed(Maincog):
         adfee = int(pot) * (self.taxes[type.lower()]["advertiser"] / 100)
         boosterfee = int(pot) * round(((self.taxes[type.lower()]["boosters"] / 100) / totalBoosters), 3)
         managementfee = int(pot) * (self.taxes[type.lower()]["management"] / 100)
-        keyholderfee = int(pot) * (self.taxes[type.lower()]["keyholder"] / 100)
+
+        if type == "M+":
+            keyholderfee = int(pot) * (self.taxes[type.lower()]["keyholder"] / 100)
+            
         type = type.replace('_', ' ')
 
-        embed = discord.Embed(title=f"{type} Completed!", color=0x00ff00)
+        embed = discord.Embed(title=f"{type} Completed!", color=0x9013FE)
         embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
         embed.add_field(name="Type", value=type, inline=False)
         embed.add_field(name="Booster 1", value=f"{eb1} {'' if invoked else f'({booster1})'}", inline=False)
@@ -300,7 +303,7 @@ class Completed(Maincog):
                                                 f"{booster2}\n"
                                                 f"{booster3}\n"
                                                 f"{booster4}"),
-                                    color=0x00ff00)
+                                    color=0x9013FE)
             receipt.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
             await author.send("Please copy and paste this information into the message body when sending the mail.", embed=receipt)
             return True

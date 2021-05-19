@@ -267,7 +267,8 @@ class Generate(Maincog):
                 value = (id, user.mention)
                 self.dbc.insert(query, value)
 
-            group = [user.mention, user.mention, user.mention, user.mention, user.mention]
+            author = self.helper.getMemberByMention(guild, author)
+            group = [user.mention, user.mention, user.mention, user.mention, user.mention, author]
             await self.createGroup(message, group, team=True)
             return
 
@@ -390,7 +391,7 @@ class Generate(Maincog):
             keyholderCut = int(goldPot) * round((self.taxes["m+"]["keyholder"] / 100), 3)
 
             embed = discord.Embed(title=f"Generating {result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group.\n" +
-                                        "First come first served **but** the bot will **prioritise** a keyholder over those who do not have one.\n", color=0x5cf033)
+                                        "First come first served **but** the bot will **prioritise** a keyholder over those who do not have one.\n", color=0x9013FE)
             embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
             embed.add_field(name="Gold Pot", value=result[3], inline=True)
             embed.add_field(name="Booster Cut", value=f"{boosterCut:n}", inline=True)
@@ -574,6 +575,10 @@ class Generate(Maincog):
         dpsTwo = group[3]
         keystoneHolder = group[4]
 
+        # Group [5] = advertiser in team take
+        if team:
+            author = group[5]
+
         query = f"SELECT keystone_level FROM mythicplus.group WHERE id = '{message.id}'"
         group = self.dbc.select(query)
 
@@ -604,6 +609,7 @@ class Generate(Maincog):
                    WHERE id = {message.id}"""
             self.dbc.insert(query)
 
+            await author.send(content="Here's a backup of the run, incase the channel gets deleted before the completed run was posted.", embed=embed)
             msg = await message.channel.send(f"{advertiser[0]}, click the {self.trashEmoji} to delete this channel. **Make sure to post the completed run FIRST before deleting this channel.**")
             await msg.add_reaction(self.trashEmoji)
 
