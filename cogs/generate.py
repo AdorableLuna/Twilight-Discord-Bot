@@ -714,7 +714,7 @@ class Generate(Maincog):
 
     async def createNewBoostChannel(self, payload):
         guild = self.client.get_guild(payload.guild_id)
-        category = discord.utils.get(guild.categories, id=843473846400843797)
+        category = discord.utils.get(guild.categories, id=self.mplusCategory)
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
             payload.member: discord.PermissionOverwrite(read_messages=True),
