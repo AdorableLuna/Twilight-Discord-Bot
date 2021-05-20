@@ -415,11 +415,13 @@ class Generate(Maincog):
             elif keystoneLevel >= self.rareKeystoneLevel and keystoneLevel <= self.epicKeystoneLevel:
                 keystoneRole = self.helper.getRole(ctx.guild, f"Mplus {faction}")
 
+            mythicplusBannedRole = self.helper.getRole(ctx.guild, "M+ Banned")
             category = discord.utils.get(ctx.guild.categories, id=self.mplusCategory)
             overwrites = {
-                ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                keystoneRole: discord.PermissionOverwrite(read_messages=True),
-                ctx.author: discord.PermissionOverwrite(read_messages=True),
+                ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False, read_messages=False, send_messages=False, add_reactions=False),
+                mythicplusBannedRole: discord.PermissionOverwrite(view_channel=False, read_messages=False, send_messages=False, read_message_history=False),
+                keystoneRole: discord.PermissionOverwrite(view_channel=True, read_messages=True, send_messages=True, add_reactions=False, read_message_history=True),
+                ctx.author: discord.PermissionOverwrite(view_channel=True, read_messages=True, send_messages=True, add_reactions=False, read_message_history=True),
             }
 
             await ctx.channel.edit(name=f"{faction}-{'Any' if armor == 'Any' else self.helper.getRoleById(ctx.guild, armor).name}-{result[2]}-{result[4]}-boost", overwrites=overwrites, reason="Automatic M+ booking made.")
