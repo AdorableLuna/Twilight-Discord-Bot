@@ -53,7 +53,7 @@ class Twilight(commands.Bot):
                 return
 
         await ctx.send(f'{ctx.author.mention}, there was an error with your command. Please check if your command has the correct format, otherwise notify the staff.')
-        log.error(f"Command: {ctx.command.name} | {error}")
+        log.error(f"Sent by: {ctx.author.nick} | Channel: {ctx.channel} | Command: {ctx.command.name} | Command message: {ctx.message.content} | {error}")
 
     async def on_ready(self):
         print(f'{self.user} has connected to Discord!')
