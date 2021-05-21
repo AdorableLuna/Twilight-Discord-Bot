@@ -231,7 +231,7 @@ class Admin(commands.Cog):
     @commands.group(name='bookings', hidden=True, invoke_without_command=True)
     @commands.has_any_role("Council")
     async def bookings(self, ctx):
-        embed = discord.Embed(title="M+ Boost", description="Click the emoji's below to book a run.", color=0x5cf033)
+        embed = discord.Embed(title="M+ Boost", description="Click the emoji's below to book a run.", color=0x9013FE)
         msg = await ctx.channel.send(embed=embed)
 
         await msg.add_reaction(self.hordeEmoji)

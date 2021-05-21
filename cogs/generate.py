@@ -45,7 +45,7 @@ class Generate(Maincog):
             "Plate"
         ]
         self.legendaryKeystoneLevel = 16
-        self.epicKeystoneLevel = 15
+        self.epicKeystoneLevel = 14
         self.rareKeystoneLevel = 13
         self.mplusCategory = 843473846400843797
 
@@ -368,7 +368,7 @@ class Generate(Maincog):
                         if keystoneLevel >= self.epicKeystoneLevel and keystoneLevel < self.legendaryKeystoneLevel:
                             keystoneRole = self.helper.getRole(ctx.guild, f"Highkey Booster {faction}").mention
                             mentions += keystoneRole + " "
-                        elif keystoneLevel >= self.rareKeystoneLevel and keystoneLevel <= self.epicKeystoneLevel:
+                        elif keystoneLevel < self.epicKeystoneLevel:
                             keystoneRole = self.helper.getRole(ctx.guild, "Mplus Booster").mention
                             mentions += keystoneRole + " "
 
@@ -392,7 +392,7 @@ class Generate(Maincog):
 
             embed = discord.Embed(title=f"Generating {result[2]} run!", description="Click on the reaction below the post with your assigned roles to join the group.\n" +
                                         "First come first served **but** the bot will **prioritise** a keyholder over those who do not have one.\n", color=0x9013FE)
-            embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
+            embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/699709321180741642/842730940744466452/Final_Logo_Render.png")
             embed.add_field(name="Gold Pot", value=result[3], inline=True)
             embed.add_field(name="Booster Cut", value=f"{boosterCut:n}", inline=True)
             embed.add_field(name="Advertiser Cut", value=f"{advertiserCut:n}", inline=True)
@@ -412,15 +412,19 @@ class Generate(Maincog):
 
             if keystoneLevel >= self.epicKeystoneLevel:
                 keystoneRole = self.helper.getRole(ctx.guild, f"Highkey Booster {faction}")
-            elif keystoneLevel >= self.rareKeystoneLevel and keystoneLevel <= self.epicKeystoneLevel:
+            elif keystoneLevel < self.epicKeystoneLevel:
                 keystoneRole = self.helper.getRole(ctx.guild, f"Mplus {faction}")
 
             mythicplusBannedRole = self.helper.getRole(ctx.guild, "M+ Banned")
+            advertiserTrainerRole = self.helper.getRole(ctx.guild, "Advertiser Trainer")
+            managementRole = self.helper.getRole(ctx.guild, "Management")
             category = discord.utils.get(ctx.guild.categories, id=self.mplusCategory)
             overwrites = {
                 ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False, read_messages=False, send_messages=False, add_reactions=False),
                 mythicplusBannedRole: discord.PermissionOverwrite(view_channel=False, read_messages=False, send_messages=False, read_message_history=False),
                 keystoneRole: discord.PermissionOverwrite(view_channel=True, read_messages=True, send_messages=True, add_reactions=False, read_message_history=True),
+                advertiserTrainerRole: discord.PermissionOverwrite(view_channel=True, read_messages=True, send_messages=True, add_reactions=False, read_message_history=True),
+                managementRole: discord.PermissionOverwrite(view_channel=True, read_messages=True, send_messages=True, add_reactions=False, read_message_history=True),
                 ctx.author: discord.PermissionOverwrite(view_channel=True, read_messages=True, send_messages=True, add_reactions=False, read_message_history=True),
             }
 
@@ -705,18 +709,22 @@ class Generate(Maincog):
     def getKeystoneRole(self, guild, keystoneLevel):
         if keystoneLevel >= self.legendaryKeystoneLevel:
             keystoneRole = self.helper.getRole(guild, "Legendary")
-        if keystoneLevel <= self.epicKeystoneLevel:
+        if keystoneLevel >= self.epicKeystoneLevel and keystoneLevel < self.legendaryKeystoneLevel:
             keystoneRole = self.helper.getRole(guild, "Epic")
-        if keystoneLevel <= self.rareKeystoneLevel:
+        if keystoneLevel < self.epicKeystoneLevel:
             keystoneRole = self.helper.getRole(guild, "Rare")
 
         return keystoneRole
 
     async def createNewBoostChannel(self, payload):
         guild = self.client.get_guild(payload.guild_id)
+        advertiserTrainerRole = self.helper.getRole(guild, "Advertiser Trainer")
+        managementRole = self.helper.getRole(guild, "Management")
         category = discord.utils.get(guild.categories, id=self.mplusCategory)
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            advertiserTrainerRole: discord.PermissionOverwrite(view_channel=True, read_messages=True, send_messages=True, add_reactions=False, read_message_history=True),
+            managementRole: discord.PermissionOverwrite(view_channel=True, read_messages=True, send_messages=True, add_reactions=False, read_message_history=True),
             payload.member: discord.PermissionOverwrite(read_messages=True),
         }
 
