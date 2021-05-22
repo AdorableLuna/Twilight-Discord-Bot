@@ -253,7 +253,7 @@ class Completed(Maincog):
         if type == 'M+':
             RANGE_NAME = "'Completed M+ Logs'!A12:M"
         else:
-            RANGE_NAME = "'MISC'!A3:N"
+            RANGE_NAME = "'MISC'!A3:O"
 
         SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]["MAIN"]
         allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, f"{RANGE_NAME}")
@@ -277,7 +277,7 @@ class Completed(Maincog):
             else:
                 UPDATE_RANGE = f"'MISC'!A{rowCount}"
                 emptyRow = (not allRows[i] or not allRows[i][0] and not allRows[i][1] and not allRows[i][2] and not allRows[i][3] and not allRows[i][4] and not allRows[i][5]
-                    and not allRows[i][6] and not allRows[i][7] and not allRows[i][8] and not allRows[i][9] and not allRows[i][10] and not allRows[i][11] and not allRows[i][12] and not allRows[i][13] and not allRows[i][14])
+                    and not allRows[i][6] and not allRows[i][7] and not allRows[i][8] and not allRows[i][9] and not allRows[i][10] and not allRows[i][11] and not allRows[i][12] and not allRows[i][13])
 
             # If the encountered row is completely empty, but does have a checkmark
             if emptyRow:
