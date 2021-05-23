@@ -274,8 +274,12 @@ class Generate(Maincog):
 
         if str(payload.emoji) == str(self.cancelEmoji):
             if user.mention == author:
+                if group["created"]:
+                    await user.send(content="Don't forget to post the completed run.", embed=message.embeds[0])
+                else:
+                    await self.cancelGroup(guild, message)
+
                 await message.channel.delete()
-                await self.cancelGroup(guild, message)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
