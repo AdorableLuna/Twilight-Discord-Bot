@@ -6,6 +6,8 @@ import itertools
 import math
 import locale
 import json
+import chat_exporter
+import io
 
 from cogs.maincog import Maincog
 from discord.utils import get
@@ -46,7 +48,7 @@ class Generate(Maincog):
         ]
         self.legendaryKeystoneLevel = 16
         self.epicKeystoneLevel = 14
-        self.rareKeystoneLevel = 13
+        self.rareKeystoneLevel = 14
         self.mplusCategory = 843473846400843797
 
         with open('taxes.json', 'r') as taxesFile:
@@ -59,6 +61,7 @@ class Generate(Maincog):
         await self.client.wait_until_ready()
         self.bookingChannel = self.client.get_channel(843826350464696332)
         self.completedChannel = self.client.get_channel(731479403862949928)
+        self.bookingLogsChannel = self.client.get_channel(844928358684819490)
         self.tankEmoji = self.client.get_emoji(714930608266018859)
         self.healerEmoji = self.client.get_emoji(714930600267612181)
         self.dpsEmoji = self.client.get_emoji(714930578461425724)
@@ -104,6 +107,7 @@ class Generate(Maincog):
                 author = author["advertiser"].split(" ", 1)[0]
 
                 if user.mention == author:
+                    await self.createTranscript(channel, user)
                     await channel.delete()
                 return
 
@@ -278,6 +282,7 @@ class Generate(Maincog):
                     await user.send(content="Don't forget to post the completed run.", embed=message.embeds[0])
                 else:
                     await self.cancelGroup(guild, message)
+                    await self.createTranscript(channel, user)
 
                 await message.channel.delete()
 
@@ -369,10 +374,10 @@ class Generate(Maincog):
                         keystoneRole = self.helper.getRole(ctx.guild, "Legendary").mention
                         mentions += keystoneRole + " "
                     else:
-                        if keystoneLevel >= self.epicKeystoneLevel and keystoneLevel < self.legendaryKeystoneLevel:
+                        if keystoneLevel > self.epicKeystoneLevel and keystoneLevel < self.legendaryKeystoneLevel:
                             keystoneRole = self.helper.getRole(ctx.guild, f"Highkey Booster {faction}").mention
                             mentions += keystoneRole + " "
-                        elif keystoneLevel < self.epicKeystoneLevel:
+                        elif keystoneLevel <= self.epicKeystoneLevel:
                             keystoneRole = self.helper.getRole(ctx.guild, "Mplus Booster").mention
                             mentions += keystoneRole + " "
 
@@ -414,9 +419,9 @@ class Generate(Maincog):
 
             await ctx.message.delete()
 
-            if keystoneLevel >= self.epicKeystoneLevel:
+            if keystoneLevel > self.epicKeystoneLevel:
                 keystoneRole = self.helper.getRole(ctx.guild, f"Highkey Booster {faction}")
-            elif keystoneLevel < self.epicKeystoneLevel:
+            elif keystoneLevel <= self.epicKeystoneLevel:
                 keystoneRole = self.helper.getRole(ctx.guild, f"Mplus {faction}")
 
             mythicplusBannedRole = self.helper.getRole(ctx.guild, "M+ Banned")
@@ -432,7 +437,7 @@ class Generate(Maincog):
                 ctx.author: discord.PermissionOverwrite(view_channel=True, read_messages=True, send_messages=True, add_reactions=False, read_message_history=True),
             }
 
-            await ctx.channel.edit(name=f"{faction}-{'Any' if armor == 'Any' else self.helper.getRoleById(ctx.guild, armor).name}-{result[2]}-{result[4]}-boost", overwrites=overwrites, reason="Automatic M+ booking made.")
+            await ctx.channel.edit(name=f"{faction}-{result[4]}-{result[2]}-{'Any' if armor == 'Any' else self.helper.getRoleById(ctx.guild, armor).name}-boost", overwrites=overwrites, reason="Automatic M+ booking made.")
             await ctx.channel.purge(limit=None, check=lambda msg: not msg.pinned)
             msg = await ctx.channel.send(content=mentions, embed=embed)
             embed.set_footer(text=f"Group id: {msg.id}.")
@@ -492,8 +497,8 @@ class Generate(Maincog):
             return
 
         embed = message.embeds[0]
-        embed.description = f"""Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n
-                            {self.tankEmoji} {tank}\n{self.healerEmoji} {healer}\n{self.dpsEmoji} {dpsOne}\n{self.dpsEmoji} {dpsTwo}\n\n{self.keystoneEmoji} {keystone}"""
+        embed.description = (f"Click on the reaction below the post with your assigned roles to join the group. First come first serve.\n\n" +
+                             f"{self.tankEmoji} {tank}\n{self.healerEmoji} {healer}\n{self.dpsEmoji} {dpsOne}\n{self.dpsEmoji} {dpsTwo}\n\n{self.keystoneEmoji} {keystone}")
         await message.edit(embed=embed)
 
     def getGroup(self, message):
@@ -613,6 +618,7 @@ class Generate(Maincog):
         # Done if group is not a team
         if not team:
             await message.add_reaction(self.doneEmoji)
+            await message.add_reaction(self.trashEmoji)
         else:
             query = f"""UPDATE mythicplus.group
                    SET completed = 1
@@ -627,7 +633,7 @@ class Generate(Maincog):
         isValid = False
         keystoneLevel = int(data["keystone_level"].partition("+")[2])
 
-        if keystoneLevel >= self.epicKeystoneLevel:
+        if keystoneLevel > self.epicKeystoneLevel:
             if data["faction"] == "Horde":
                 factionRole = self.helper.getRole(guild, "Highkey Booster Horde")
             elif data["faction"] == "Alliance":
@@ -713,9 +719,9 @@ class Generate(Maincog):
     def getKeystoneRole(self, guild, keystoneLevel):
         if keystoneLevel >= self.legendaryKeystoneLevel:
             keystoneRole = self.helper.getRole(guild, "Legendary")
-        if keystoneLevel >= self.epicKeystoneLevel and keystoneLevel < self.legendaryKeystoneLevel:
+        if keystoneLevel > self.epicKeystoneLevel and keystoneLevel < self.legendaryKeystoneLevel:
             keystoneRole = self.helper.getRole(guild, "Epic")
-        if keystoneLevel < self.epicKeystoneLevel:
+        if keystoneLevel <= self.epicKeystoneLevel:
             keystoneRole = self.helper.getRole(guild, "Rare")
 
         return keystoneRole
@@ -749,6 +755,28 @@ class Generate(Maincog):
 
         f"Click {self.trashEmoji} to delete this channel."))
         await msg.add_reaction(self.trashEmoji)
+
+    async def createTranscript(self, channel, user):
+        embed = discord.Embed(title="M+ Transcript", color=0x9013FE)
+        embed.set_thumbnail(url="https://cdn.discordapp.com/icons/629729313520091146/a_c708c65e803287d010ea489dd43383be.gif?size=1024")
+        embed.add_field(name="Advertiser", value=user.mention, inline=True)
+        embed.add_field(name="Advertiser ID", value=user.id, inline=True)
+        embed.add_field(name="Section", value=channel.category, inline=True)
+        embed.add_field(name="Deleted By", value=user.mention, inline=True)
+        embed.add_field(name="Channel Name", value=channel.name, inline=True)
+
+        transcript = await chat_exporter.export(channel, set_timezone="Europe/Amsterdam")
+
+        if transcript is None:
+            await self.bookingLogsChannel.send(f"Transcript could not be created for channel: {channel.name}")
+            return
+
+        transcript_file = discord.File(io.BytesIO(transcript.encode()),
+                                        filename=f"transcript-{channel.name}.html")
+
+        msg = await self.bookingLogsChannel.send(embed=embed, file=transcript_file)
+        embed.add_field(name="Transcript", value=f"[Click Here]({msg.attachments[0].url})", inline=True)
+        await msg.edit(embed=embed)
 
 def setup(client):
     client.add_cog(Generate(client))
