@@ -1,4 +1,5 @@
 import discord
+import json
 import re
 
 from cogs.maincog import Maincog
@@ -12,56 +13,15 @@ class Completed(Maincog):
         Maincog.__init__(self, client, whitelistedChannels = [731479403862949928])
         self.cancelEmoji = "\U0000274C"
         self.doneEmoji = "\U00002705"
-        self.taxes = {
-            "m+": {
-                "boosters": 71.2,
-                "advertiser": 17.3,
-                "management": 11.5
-            },
-            "pvp": {
-                "boosters": 80,
-                "advertiser": 10,
-                "management": 10
-            },
-            "glad_pvp": {
-                "boosters": 85,
-                "advertiser": 7.5,
-                "management": 7.5
-            },
-            "leveling": {
-                "boosters": 80,
-                "advertiser": 10,
-                "management": 10
-            },
-            "ie": {
-                "boosters": 80,
-                "advertiser": 10,
-                "management": 10
-            },
-            "legacy": {
-                "boosters": 80,
-                "advertiser": 10,
-                "management": 10
-            },
-            "mount": {
-                "boosters": 75,
-                "advertiser": 15,
-                "management": 10
-            },
-            "vision": {
-                "boosters": 75,
-                "advertiser": 15,
-                "management": 10
-            },
-            "duo": {
-                "boosters": 71.2,
-                "advertiser": 17.3,
-                "management": 11.5
-            }
-        }
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+        with open('taxes.json', 'r') as taxesFile:
+            self.taxes = json.load(taxesFile)
+            taxesFile.close()
+
+        self.client.loop.create_task(self.on_ready_init())
+
+    async def on_ready_init(self):
+        await self.client.wait_until_ready()
         self.channel = self.client.get_channel(731479403862949928)
 
     @commands.Cog.listener()
@@ -82,11 +42,15 @@ class Completed(Maincog):
                 embed = message.embeds[0]
                 fields = embed.fields
                 type = fields[0].value
+
+                realmFaction = next((field.value for field in fields if field.name == 'Location of the Gold')).split("-")
+
+                #TRUEDATA values follow same order as the columns on the sheet
                 TRUEDATA = []
 
                 TRUEDATA.append(next((field.value for field in fields if field.name == 'Gold Pot')).replace(',', ''))
-                TRUEDATA.append(next((field.value for field in fields if field.name == 'Location of the Gold')))
-                TRUEDATA.append(next((field.value for field in fields if field.name == 'Faction')))
+                TRUEDATA.append(realmFaction[0])
+                TRUEDATA.append(realmFaction[1])
                 adv = next((field.value.split(" ", 1) for field in fields if field.name == 'Advertiser'))
                 b1 = next((field.value.split(" ", 1) for field in fields if field.name == 'Booster 1'))
                 b2 = next((field.value.split(" ", 1) for field in fields if field.name == 'Booster 2'), "")
@@ -115,6 +79,10 @@ class Completed(Maincog):
                 except:
                     TRUEDATA.append("")
 
+                if type == 'M+':
+                    keyholder = next((field.value.split(" ", 1) for field in fields if field.name == 'Keyholder'), "")
+                    embed.set_field_at(index=5, name='Keyholder', value=keyholder[0], inline=False)
+
                 match = re.search(r'\d{2}-\d{2} \d{2}:\d{2}:\d{2}', embed.footer.text)
                 created_at = match.group()
 
@@ -124,6 +92,11 @@ class Completed(Maincog):
                     TRUEDATA.append(next((field.value for field in fields if field.name == 'Booster Cut')).replace(',', ''))
 
                 TRUEDATA.append(created_at)
+                TRUEDATA.append(next((field.value for field in fields if field.name == 'Faction of the Boost')))
+
+                if type == 'M+':
+                    TRUEDATA.append(re.search(reg_exp, keyholder[1])[1])
+
                 id = embed.footer.text.split("Run id: ", 1)[1]
                 TRUEDATA.insert(0, str(id))
 
@@ -141,23 +114,25 @@ class Completed(Maincog):
         else:
             invoked = True
 
+        msg = ' '.join(args)
+        result = [x.strip() for x in msg.split()]
         created_at = datetime.now(timezone('Europe/Paris')).strftime("%d-%m %H:%M:%S")
-        DATA = args
-        if DATA[0].islower():
-            type = DATA[0].title()
+        if result[0].islower():
+            type = result[0].title()
         else:
-            type = DATA[0]
+            type = result[0]
 
-        pot = DATA[1].lower()
+        boostFaction = result[1].capitalize()
+        pot = result[2].lower()
 
         if "k" in pot:
             pot = pot.replace('k', '')
             pot = str(pot) + "000"
         else:
-            pot = DATA[1]
+            pot = result[2]
         epot = int(pot)
 
-        realmFaction = DATA[2].split("-", 1)
+        realmFaction = result[3].rsplit("-", 1)
         try:
             potrealm = realmFaction[0]
             faction = "Horde" if realmFaction[1].lower() == 'h' else 'Alliance'
@@ -165,25 +140,25 @@ class Completed(Maincog):
             raise commands.BadArgument("Realm or faction is not defined.")
 
         author = ctx.author
-        eadv = DATA[3]
-        eb1 = DATA[4]
+        eadv = result[4]
+        eb1 = result[5]
         totalBoosters = 1
 
         if self.helper.containsUserMention(potrealm):
             raise commands.BadArgument("Realm is not defined.")
 
         try:
-            eb2 = DATA[5]
+            eb2 = result[6]
             totalBoosters += 1
         except:
             eb2 = ""
         try:
-            eb3 = DATA[6]
+            eb3 = result[7]
             totalBoosters += 1
         except:
             eb3 = ""
         try:
-            eb4 = DATA[7]
+            eb4 = result[8]
             totalBoosters += 1
         except:
             eb4 = ""
@@ -199,11 +174,15 @@ class Completed(Maincog):
 
         adfee = int(pot) * (self.taxes[type.lower()]["advertiser"] / 100)
         boosterfee = int(pot) * round(((self.taxes[type.lower()]["boosters"] / 100) / totalBoosters), 3)
-        guildfee = int(pot) * (self.taxes[type.lower()]["management"] / 100)
+        managementfee = int(pot) * (self.taxes[type.lower()]["management"] / 100)
+
+        if type == "M+":
+            keyholderfee = int(pot) * (self.taxes[type.lower()]["keyholder"] / 100)
+
         type = type.replace('_', ' ')
 
-        embed = discord.Embed(title=f"{type} Completed!", color=0x00ff00)
-        embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
+        embed = discord.Embed(title=f"{type} Completed!", color=0x9013FE)
+        embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/699709321180741642/842730940744466452/Final_Logo_Render.png")
         embed.add_field(name="Type", value=type, inline=False)
         embed.add_field(name="Booster 1", value=f"{eb1} {'' if invoked else f'({booster1})'}", inline=False)
         if eb2:
@@ -212,12 +191,18 @@ class Completed(Maincog):
             embed.add_field(name="Booster 3", value=f"{eb3} {'' if invoked else f'({booster3})'}", inline=False)
         if eb4:
             embed.add_field(name="Booster 4", value=f"{eb4} {'' if invoked else f'({booster4})'}", inline=False)
+        if type == 'M+':
+            kh = result[9]
+            keyholder = self.helper.checkName(ctx.guild, kh)
+            embed.add_field(name="Keyholder", value=f"{kh} {'' if invoked else f'({keyholder})'}", inline=False)
         embed.add_field(name="Gold Pot", value=format(epot,',d'), inline=False)
         embed.add_field(name="Booster Cut", value=format(int(boosterfee),',d'), inline=False)
         embed.add_field(name="Advertiser Cut", value=format(int(adfee),',d'), inline=False)
-        embed.add_field(name="Guild Cut", value=format(int(guildfee),',d'), inline=False)
-        embed.add_field(name="Location of the Gold", value=potrealm, inline=False)
-        embed.add_field(name="Faction", value=faction, inline=False)
+        embed.add_field(name="Management Cut", value=format(int(managementfee),',d'), inline=False)
+        if type == 'M+':
+            embed.add_field(name="Keyholder Cut", value=format(int(keyholderfee),',d'), inline=False)
+        embed.add_field(name="Faction of the Boost", value=boostFaction, inline=False)
+        embed.add_field(name="Location of the Gold", value=f"{potrealm}-{faction}", inline=False)
         embed.add_field(name="Advertiser", value=f"{eadv} {'' if invoked else f'({advertiser})'}", inline=False)
         if not invoked:
             msg = await author.send(content=f"This is a preview of the completed {type} run. Do you want to post this run?", embed=embed)
@@ -233,11 +218,11 @@ class Completed(Maincog):
 
             return msg
         else:
-            # If not invoked by .generate command, skip DM
+            # If invoked by .generate command, skip DM
             if type == 'M+':
-                TRUEDATA = [str(msg.id), epot, potrealm, faction, eadv, eb1, eb2, eb3, eb4, created_at]
+                TRUEDATA = [str(msg.id), epot, potrealm, faction, eadv, eb1, eb2, eb3, eb4, created_at, boostFaction, keyholder]
             else:
-                TRUEDATA = [str(msg.id), epot, potrealm, faction, type, eadv, eb1, eb2, eb3, eb4, adfee, boosterfee, created_at]
+                TRUEDATA = [str(msg.id), epot, potrealm, faction, type, eadv, eb1, eb2, eb3, eb4, adfee, boosterfee, created_at, boostFaction]
 
             added = await self.addToSheets(ctx.guild, author, type, TRUEDATA)
             return added, msg
@@ -266,11 +251,11 @@ class Completed(Maincog):
         TRUEDATA[8 + index] = booster4Results
 
         if type == 'M+':
-            RANGE_NAME = "'Completed M+ Logs'!A12:K"
+            RANGE_NAME = "'Completed M+ Logs'!A12:M"
         else:
-            RANGE_NAME = "'MISC'!A3:N"
+            RANGE_NAME = "'MISC'!A3:O"
 
-        SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]
+        SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]["MAIN"]
         allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, f"{RANGE_NAME}")
 
         if not allRows:
@@ -288,11 +273,11 @@ class Completed(Maincog):
             if type == 'M+':
                 UPDATE_RANGE = f"'Completed M+ Logs'!A{rowCount}"
                 emptyRow = (not allRows[i] or not allRows[i][0] and not allRows[i][1] and not allRows[i][2] and not allRows[i][3] and not allRows[i][4] and not allRows[i][5]
-                    and not allRows[i][6] and not allRows[i][7] and not allRows[i][8] and not allRows[i][9])
+                    and not allRows[i][6] and not allRows[i][7] and not allRows[i][8] and not allRows[i][9] and not allRows[i][10] and not allRows[i][11])
             else:
                 UPDATE_RANGE = f"'MISC'!A{rowCount}"
                 emptyRow = (not allRows[i] or not allRows[i][0] and not allRows[i][1] and not allRows[i][2] and not allRows[i][3] and not allRows[i][4] and not allRows[i][5]
-                    and not allRows[i][6] and not allRows[i][7] and not allRows[i][8] and not allRows[i][9] and not allRows[i][10] and not allRows[i][11] and not allRows[i][12])
+                    and not allRows[i][6] and not allRows[i][7] and not allRows[i][8] and not allRows[i][9] and not allRows[i][10] and not allRows[i][11] and not allRows[i][12] and not allRows[i][13])
 
             # If the encountered row is completely empty, but does have a checkmark
             if emptyRow:
@@ -318,8 +303,8 @@ class Completed(Maincog):
                                                 f"{booster2}\n"
                                                 f"{booster3}\n"
                                                 f"{booster4}"),
-                                    color=0x00ff00)
-            receipt.set_thumbnail(url="https://cdn.discordapp.com/attachments/632628531528073249/644669381451710495/TwilightDiscIocn.jpg")
+                                    color=0x9013FE)
+            receipt.set_thumbnail(url="https://cdn.discordapp.com/attachments/699709321180741642/842730940744466452/Final_Logo_Render.png")
             await author.send("Please copy and paste this information into the message body when sending the mail.", embed=receipt)
             return True
         else:

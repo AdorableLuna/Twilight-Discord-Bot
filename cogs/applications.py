@@ -14,11 +14,12 @@ class Applications(Maincog):
         self.epicEmoji = "\U0001F7EA"
         self.rareEmoji = "\U0001F7E6"
         self.declineEmoji = "\U0000274C"
+        self.client.loop.create_task(self.on_ready_init())
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready_init(self):
+        await self.client.wait_until_ready()
         self.twilightEmoji = self.client.get_emoji(740282389682454540)
-    
+
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         if self.checkIfUserIsItself(payload.member): return
@@ -43,7 +44,7 @@ class Applications(Maincog):
         boosteeRole = self.helper.getRole(guild, "Twilight Boostee")
         boosterRole = self.helper.getRole(guild, "Twilight Booster")
 
-        if councilRole in userRoles:
+        if self.checkIfAllowedUser(payload.member.id):
             if str(payload.emoji) == str(self.legendaryEmoji) or str(payload.emoji) == str(self.epicEmoji) or str(payload.emoji) == str(self.rareEmoji):
                 await message.author.remove_roles(boosteeRole)
                 await message.author.add_roles(boosterRole, mplusBoosterRole, mplusBoosterFactionRole)
@@ -52,7 +53,7 @@ class Applications(Maincog):
 
                 "After careful consideration your M+ Boosting Application has been accepted within Twilight Boosting Community.\n\n"
 
-                "**1)** Head to <#700676105387901038> and pick your roles. Be sure to only pick alt roles that you are able to play near main level and able to trade 465+ gear in all slots.\n"
+                "**1)** Head to <#700676105387901038> and pick your roles. Be sure to only pick alt roles that you are able to play near main level and able to trade 210+ gear in all slots.\n"
                 "**2)** Go to <#662766480068182026> to learn our rules.\n"
                 "**3)** We do pay-outs every 2 weeks, usually on a Friday. This is done via in game mail.\n"
                 "**4)** Any offensive or abusive behaviour toward buyers, members or staff will not be tolerated.\n"
@@ -87,7 +88,17 @@ class Applications(Maincog):
 
                 display_name = f"{name}-{realm}"
 
+                # Rename booster
                 await message.author.edit(nick=display_name)
+
+                # Add booster to applications sheet
+                SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]["MAIN"]
+                allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, f"'M+ Applications'!B3:D")
+                TRUEDATA = [display_name, realm, faction]
+
+                result = self.client.sheet.add(SPREADSHEET_ID, "'M+ Applications'!B3:D", TRUEDATA)
+
+                # Send DM
                 await message.author.send(acceptedMessage)
 
             if str(payload.emoji) == str(self.declineEmoji):
@@ -96,6 +107,8 @@ class Applications(Maincog):
                 "Feel free to apply again once you meet the requirements. Contact anyone from management or simply open a support ticket for further inquiries.")
 
                 await message.author.send(declineMessage)
+
+            await message.delete()
 
     @commands.Cog.listener()
     async def on_message(self, message):

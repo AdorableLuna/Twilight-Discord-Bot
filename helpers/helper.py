@@ -21,6 +21,17 @@ class Helper(object):
         else:
             return name
 
+    def getMemberByMention(self, guild, name):
+        if re.search('^<@[0-9>]+$', name):
+            name = name[2:-1]
+            member = guild.get_member(int(name))
+
+            return member
+        elif re.search('^<@![0-9>]+$', name):
+            name = name[3:-1]
+            member = guild.get_member(int(name))
+            return member
+
     def getRole(self, guild, role):
         return discord.utils.find(lambda r: r.name == role, guild.roles)
 
