@@ -46,16 +46,7 @@ class Upgrade(Maincog):
                 legendaryRole = self.helper.getRole(ctx.guild, "Legendary")
                 highKeyRole = self.helper.getRole(ctx.guild, f"Highkey Booster {faction}")
 
-                rareRoleOld = self.helper.getRole(ctx.guild, "Rare (old)")
-                epicRoleOld = self.helper.getRole(ctx.guild, "Epic (old)")
-                legendaryRoleOld = self.helper.getRole(ctx.guild, "Legendary (old)")
-
                 role = ""
-
-                # Remove old roles
-                await author.remove_roles(rareRoleOld)
-                await author.remove_roles(epicRoleOld)
-                await author.remove_roles(legendaryRoleOld)
 
                 # Remove highkey role if not epic or legendary
                 if epicRole not in userRoles:
