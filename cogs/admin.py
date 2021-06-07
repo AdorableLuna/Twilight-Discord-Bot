@@ -222,7 +222,8 @@ class Admin(commands.Cog):
                     taxesFile.close()
 
                     await ctx.invoke(self.client.get_command('reload'), module='completed')
-                    await ctx.invoke(self.client.get_command('reload'), module='generate')
+                    await ctx.invoke(self.client.get_command('reload'), module='mythicplus')
+                    await ctx.invoke(self.client.get_command('reload'), module='torghast')
                     await ctx.send(f'Succesfully updated {category} {type} cut to {tax}%.')
             except Exception as e:
                 print(f'Failed to update cut.', e)
@@ -236,6 +237,13 @@ class Admin(commands.Cog):
 
         await msg.add_reaction(self.hordeEmoji)
         await msg.add_reaction(self.allianceEmoji)
+
+        embed = discord.Embed(title="Torghast Boost", description="Click the emoji's below to book a run.", color=0x9013FE)
+        msg = await ctx.channel.send(embed=embed)
+
+        await msg.add_reaction(self.hordeEmoji)
+        await msg.add_reaction(self.allianceEmoji)
+
         await ctx.message.delete()
 
 def setup(client):

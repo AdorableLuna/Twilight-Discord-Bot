@@ -21,7 +21,7 @@ intents.members = True
 
 class Twilight(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix = '.', description = description,
+        super().__init__(command_prefix = '.', description = description, help_command=None,
                          intents=intents, activity=discord.Game(name="World of Warcraft"))
         self.config = self.__load_config()
         self.sheet = gsheet()
