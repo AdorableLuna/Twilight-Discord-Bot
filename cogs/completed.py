@@ -297,16 +297,5 @@ class Completed(Maincog):
             await author.send("Something went wrong while adding the run to the sheets and nothing was added, please try again. If this continues please contact someone from Council or Management.")
             return False
 
-    def getNameIfUserMention(self, guild, mention):
-        try:
-            if self.helper.containsUserMention(mention):
-                name = self.helper.checkName(guild, mention)
-            else:
-                name = mention
-        except:
-            name = ""
-
-        return name
-
 def setup(client):
     client.add_cog(Completed(client))
