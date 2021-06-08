@@ -27,5 +27,8 @@ class Maincog(commands.Cog):
         else:
             return False
 
+    async def convertMember(self, ctx, member):
+        return await commands.MemberConverter().convert(ctx, member)
+
 def setup(client):
     client.add_cog(Maincog(client))
