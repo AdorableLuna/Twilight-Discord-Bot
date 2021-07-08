@@ -246,5 +246,87 @@ class Admin(commands.Cog):
 
         await ctx.message.delete()
 
+    @commands.command(aliases=['ac'])
+    @commands.has_any_role("Council")
+    async def access(self, ctx, type = None, category = None, user:discord.Member = None):
+        if not type:
+            with open('access.json', 'r') as accessFile:
+                access = json.load(accessFile)
+                accessFile.close()
+
+                description = ""
+
+                for category in access:
+                    description += f"**{access[category]['name']}**\n"
+
+                    for user in access[category]['users']:
+                        description += f"{user}\n"
+
+                    description += "\n"
+
+                embed = discord.Embed(title="Application Access", description=description, color=0x9013FE)
+                embed.set_thumbnail(url="https://cdn.discordapp.com/icons/629729313520091146/a_c708c65e803287d010ea489dd43383be.gif?size=1024")
+                await ctx.send(embed=embed)
+
+        elif type.lower() == 'add':
+            with open('access.json', 'r') as accessFile:
+                access = json.load(accessFile)
+                accessFile.close()
+
+                try:
+                    if user.mention not in access[category.lower()]['users']:
+                        access[category.lower()]['users'].append(user.mention)
+
+                        with open('access.json', 'w') as accessFile:
+                            json.dump(access, accessFile)
+                            accessFile.close()
+
+                            await ctx.send(f"{user.mention} has been given access to {category.lower()} applications.")
+
+                    else:
+                        await ctx.send(f"{user.mention} already has access to {category.lower()} applications.")
+                except Exception as e:
+                    print(f'Failed to add user to access.', e)
+
+                    message = "Available Modules: "
+
+                    for category in access:
+                        message += f"`{category}`, "
+
+                    message = message[:-2] + "."
+                    message += "\n\nExample: `.access add mplus [userid]`"
+
+                    await ctx.send(message)
+
+        elif type.lower() == 'remove':
+            with open('access.json', 'r') as accessFile:
+                access = json.load(accessFile)
+                accessFile.close()
+
+                try:
+                    if user.mention in access[category.lower()]['users']:
+                        access[category.lower()]['users'].remove(user.mention)
+
+                        with open('access.json', 'w') as accessFile:
+                            json.dump(access, accessFile)
+                            accessFile.close()
+
+                            await ctx.send(f"{user.mention} has had their access removed from {category.lower()} applications.")
+
+                    else:
+                        await ctx.send(f"{user.mention} does not have access to {category.lower()} applications.")
+                except Exception as e:
+                    print(f'Failed to remove user to access.', e)
+
+                    message = "Available Modules: "
+
+                    for category in access:
+                        message += f"`{category}`, "
+
+                    message = message[:-2] + "."
+                    message += "\n\nExample: `.access remove mplus [userid]`"
+
+                    await ctx.send(message)
+
 def setup(client):
     client.add_cog(Admin(client))
