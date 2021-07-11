@@ -128,6 +128,9 @@ class ApplicationsRaid(Maincog):
                 await author.add_roles(dpsRole)
 
             if str(payload.emoji) == str(self.acceptEmoji):
+                display_name = f"{character.capitalize()}-{realm.capitalize()}"
+                await author.edit(nick=display_name)
+                
                 await author.remove_roles(twilightBoosteeRole)
                 await author.add_roles(twilightBoosterRole, twilightRaidBoosterRole, armorRole, classRole, raidRole)
 
