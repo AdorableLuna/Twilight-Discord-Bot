@@ -78,6 +78,7 @@ class ApplicationsCurve(Maincog):
         guild = self.client.get_guild(payload.guild_id)
 
         message = await channel.fetch_message(payload.message_id)
+        if not message.embeds: return
         embed = message.embeds[0]
         fields = embed.fields
 
@@ -128,7 +129,7 @@ class ApplicationsCurve(Maincog):
                 await author.add_roles(dpsRole)
 
             if str(payload.emoji) == str(self.acceptEmoji):
-                display_name = f"{character.capitalize()}-{realm.capitalize()}"
+                display_name = f"{data['name']}-{data['realm'].replace(' ', '')}"
                 await author.edit(nick=display_name)
 
                 await author.remove_roles(twilightBoosteeRole)
