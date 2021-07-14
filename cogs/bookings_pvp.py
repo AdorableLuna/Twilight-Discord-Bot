@@ -160,7 +160,7 @@ class BookingsPvP(Maincog):
             embed.add_field(name="Client Name", value=data['name'], inline=True)
             embed.add_field(name="Class", value=f"{data['class']} {data['active_spec_name']}", inline=True)
             embed.add_field(name="iLvl & Covenant", value=f"{data['gear']['item_level_equipped']}, {data['covenant']['name']}", inline=True)
-            embed.add_field(name="Check-pvp Link", value=f"{self.linkEmoji} [{data['name']}-{data['realm']}]({check_pvp_link})", inline=True)
+            embed.add_field(name="Check-PvP Link", value=f"{self.linkEmoji} [{data['name']}-{data['realm']}]({check_pvp_link})", inline=True)
             if notes:
                 embed.add_field(name="Notes", value=f"{self.notesEmoji} `{notes}`", inline=False)
             embed.set_footer(text=f"React with {self.moneybagEmoji} to sign up for the boost. A booster is randomly drawn within 2 minutes of posting. If no one signs within 2 minutes, the first person to sign will automatically win.")

@@ -19,6 +19,9 @@ class ApplicationsAdvertiser(Maincog):
         self.acceptEmoji = self.client.get_emoji(862363079336525824)
         self.twilightEmoji = self.client.get_emoji(862443835370897428)
         self.dotEmoji = self.client.get_emoji(863866968975867914)
+        self.receivedMessage = (f"{self.twilightEmoji} **Twilight Application Received: Advertiser** {self.twilightEmoji}\n\n"
+
+        "Thank you for choosing Twilight and applying as an Advertiser. This message serves as a confirmation that we have successfully received your application.")
         self.acceptMessage = (f"{self.twilightEmoji} **Twilight Application Accepted: Advertiser** {self.twilightEmoji}\n\n"
 
         "We are pleased to announce that your Advertiser application has been accepted. Down below you will find additional information about your newfound role.\n\n"
@@ -124,6 +127,7 @@ class ApplicationsAdvertiser(Maincog):
 
             await message.delete()
             msg = await self.advertiserAppsChannel.send(embed=embed)
+            await message.author.send(self.receivedMessage)
 
             await msg.add_reaction(self.acceptEmoji)
             await msg.add_reaction(self.declineEmoji)

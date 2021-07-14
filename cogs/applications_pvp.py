@@ -21,6 +21,9 @@ class ApplicationsPvP(Maincog):
         self.pvpAppsChannel = self.client.get_channel(864189821063921684)
         self.rbgEmoji = self.client.get_emoji(864190766192263168)
         self.twilightEmoji = self.client.get_emoji(862443835370897428)
+        self.receivedMessage = (f"{self.twilightEmoji} **Twilight Application Received: PvP** {self.twilightEmoji}\n\n"
+
+        "Thank you for choosing Twilight and applying as a PvP Booster. This message serves as a confirmation that we have successfully received your application.")
         self.acceptMessage = (f"{self.twilightEmoji} **Twilight Application Accepted: PvP** {self.twilightEmoji}\n\n"
 
         "We are pleased to announce your that your PvP Application to Twilight has been accepted. For an introduction on how our systems work, please contact <@213003286196781056> or <@218472898124447744>.\n\n"
@@ -125,6 +128,7 @@ class ApplicationsPvP(Maincog):
 
                 await message.delete()
                 msg = await self.pvpAppsChannel.send(embed=embed)
+                await message.author.send(self.receivedMessage)
 
                 await msg.add_reaction(self.arenaEmoji)
                 await msg.add_reaction(self.rbgEmoji)
