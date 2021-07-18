@@ -45,6 +45,7 @@ class Upgrade(Maincog):
                 epicRole = self.helper.getRole(ctx.guild, "Epic")
                 legendaryRole = self.helper.getRole(ctx.guild, "Legendary")
                 highKeyRole = self.helper.getRole(ctx.guild, f"Highkey Booster {faction}")
+                twilightBoosterRole = self.helper.getRole(ctx.guild, "Twilight Booster")
 
                 role = ""
 
@@ -55,17 +56,18 @@ class Upgrade(Maincog):
                 if rareRole in userRoles and epicRole in userRoles and legendaryRole in userRoles:
                     description = "You already have all the roles."
                 else:
-                    if allScore > 1100 and faction == "Alliance" or allScore > 1100 and faction == "Horde":
+                    if allScore > 1500 and faction == "Alliance" or allScore > 1500 and faction == "Horde":
                         role = rareRole
                         await author.add_roles(role)
-                    if allScore > 1500 and faction == "Alliance" or allScore > 1500 and faction == "Horde":
+                    if allScore > 2000 and faction == "Alliance" or allScore > 2000 and faction == "Horde":
                         role = epicRole
                         await author.add_roles(role, highKeyRole)
-                    if allScore > 1800 and faction == "Alliance" or allScore > 1800 and faction == "Horde":
+                    if allScore > 2200 and faction == "Alliance" or allScore > 2200 and faction == "Horde":
                         role = legendaryRole
                         await author.add_roles(role, highKeyRole)
 
                     if role:
+                        await author.add_roles(twilightBoosterRole)
                         description = f"You have been granted the role {role.mention}.\n\n"
                     else:
                         description = "Your character is not yet eligible for any other roles.\n\n"
