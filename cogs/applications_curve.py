@@ -152,7 +152,7 @@ class ApplicationsCurve(Maincog):
         if not self.checkIfAllowedChannel(message.channel.id): return
 
         try:
-            link = re.search("([^/]+)/([^/]+)/?$", message.content)
+            link = re.search("([^/]+)/([^/]+)/?$", message.content.split("?")[0])
             realm = link.group(1)
             character = link.group(2)
 

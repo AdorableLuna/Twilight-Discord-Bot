@@ -115,28 +115,28 @@ class ApplicationsMythicPlus(Maincog):
             rareRole = None
 
             if data['faction'] == 'horde':
-                if data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 2100:
+                if data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 2200:
                     highkeyBoosterRole = self.helper.getRole(guild, f"Highkey Booster {data['faction'].capitalize()}")
                     legendaryRole = self.helper.getRole(guild, "Legendary")
                     epicRole = self.helper.getRole(guild, "Epic")
                     rareRole = self.helper.getRole(guild, "Rare")
-                elif data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 1600 and data['mythic_plus_scores_by_season'][0]['scores']['all'] < 2100:
+                elif data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 2000 and data['mythic_plus_scores_by_season'][0]['scores']['all'] < 2200:
                     highkeyBoosterRole = self.helper.getRole(guild, f"Highkey Booster {data['faction'].capitalize()}")
                     epicRole = self.helper.getRole(guild, "Epic")
                     rareRole = self.helper.getRole(guild, "Rare")
-                elif data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 1300 and data['mythic_plus_scores_by_season'][0]['scores']['all'] < 1600:
+                elif data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 1500 and data['mythic_plus_scores_by_season'][0]['scores']['all'] < 2000:
                     rareRole = self.helper.getRole(guild, "Rare")
             elif data['faction'] == 'alliance':
-                if data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 2100:
+                if data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 2200:
                     highkeyBoosterRole = self.helper.getRole(guild, f"Highkey Booster {data['faction'].capitalize()}")
                     legendaryRole = self.helper.getRole(guild, "Legendary")
                     epicRole = self.helper.getRole(guild, "Epic")
                     rareRole = self.helper.getRole(guild, "Rare")
-                elif data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 1600 and data['mythic_plus_scores_by_season'][0]['scores']['all'] < 2100:
+                elif data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 2000 and data['mythic_plus_scores_by_season'][0]['scores']['all'] < 2200:
                     highkeyBoosterRole = self.helper.getRole(guild, f"Highkey Booster {data['faction'].capitalize()}")
                     epicRole = self.helper.getRole(guild, "Epic")
                     rareRole = self.helper.getRole(guild, "Rare")
-                elif data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 1300 and data['mythic_plus_scores_by_season'][0]['scores']['all'] < 1600:
+                elif data['mythic_plus_scores_by_season'][0]['scores']['all'] >= 1500 and data['mythic_plus_scores_by_season'][0]['scores']['all'] < 2000:
                     rareRole = self.helper.getRole(guild, "Rare")
 
             for key, value in self.armors.items():
@@ -201,7 +201,7 @@ class ApplicationsMythicPlus(Maincog):
             referral = re.search(r'Did someone refer you\? If so, who\?([^\>]*)Would you also like\/learn how to advertise for us\? \(20% Adv Cut\)', message.content).group(1).strip()
             advertisement = re.search(r'Would you also like\/learn how to advertise for us\? \(20% Adv Cut\)([^\>]*)', message.content).group(1).strip()
 
-            link = re.search("([^/]+)/([^/]+)/?$", rio_link)
+            link = re.search("([^/]+)/([^/]+)/?$", rio_link.split("?")[0])
             realm = link.group(1)
             character = link.group(2)
 

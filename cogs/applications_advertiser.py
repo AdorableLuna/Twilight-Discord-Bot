@@ -116,7 +116,7 @@ class ApplicationsAdvertiser(Maincog):
             embed.add_field(name="Username", value=message.author.name, inline=True)
             embed.add_field(name="Usertag", value=message.author.mention, inline=True)
             embed.add_field(name="UserID", value=message.author.id, inline=True)
-            embed.add_field(name="Raider.io Link", value=rio_link, inline=False)
+            embed.add_field(name="Raider.io Link", value=rio_link.split("?")[0], inline=False)
             embed.add_field(name="Battle Tag", value=battle_tag, inline=False)
             embed.add_field(name="Access to Allied races? Yes/No", value=allied_race, inline=False)
             embed.add_field(name="Are you good at speaking English? Do you know any other languages?", value=languages, inline=False)
