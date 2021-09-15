@@ -127,7 +127,10 @@ class ApplicationsAdvertiser(Maincog):
 
             await message.delete()
             msg = await self.advertiserAppsChannel.send(embed=embed)
-            await message.author.send(self.receivedMessage)
+            try:
+                await message.author.send(self.receivedMessage)
+            except Exception:
+                pass
 
             await msg.add_reaction(self.acceptEmoji)
             await msg.add_reaction(self.declineEmoji)

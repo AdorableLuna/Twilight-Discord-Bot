@@ -136,6 +136,21 @@ class ApplicationsCurve(Maincog):
                 await author.add_roles(twilightBoosterRole, twilightRaidBoosterRole, armorRole, classRole, curveRole)
 
                 SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]["MAIN"]
+                allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, "'Balance'!A2:D")
+
+                if not allRows:
+                    await payload.member.send("Something went wrong with retrieving data from the sheets, please try again. If this continues, please contact someone from Council or Management.")
+                    return
+
+                for i in range(len(allRows)):
+                    if not allRows[i]: continue
+
+                    if allRows[i][0] == author.display_name:
+                        await author.send(self.acceptMessage)
+                        await message.delete()
+                        return
+
+                SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]["MAIN"]
                 self.client.sheet.add(SPREADSHEET_ID, "'Applications'!N3:P", [f"{data['name']}-{data['realm'].replace(' ', '')}", data['realm'].replace(' ', ''), data['faction'].capitalize()])
 
                 await author.send(self.acceptMessage)
@@ -170,7 +185,7 @@ class ApplicationsCurve(Maincog):
                 embed.add_field(name="UserID", value=message.author.id, inline=True)
                 embed.add_field(name="Name", value=f"[{data['name']}]({data['profile_url']})", inline=True)
                 embed.add_field(name="Class", value=f"{data['class']}", inline=True)
-                embed.add_field(name="Covenant", value=f"{data['covenant']['name']}", inline=True)
+                embed.add_field(name="Covenant", value=f"{data['covenant']['name'] if data['covenant'] else 'Not found'}", inline=True)
                 embed.add_field(name="Mythic", value=f"{data['raid_progression'][currentRaid]['mythic_bosses_killed']}/{data['raid_progression'][currentRaid]['total_bosses']}", inline=True)
                 embed.add_field(name="Heroic", value=f"{data['raid_progression'][currentRaid]['heroic_bosses_killed']}/{data['raid_progression'][currentRaid]['total_bosses']}", inline=True)
                 embed.add_field(name="Logs", value=f"[Click](https://www.warcraftlogs.com/character/eu/{realm}/{character})", inline=True)

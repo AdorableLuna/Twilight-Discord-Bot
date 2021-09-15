@@ -87,6 +87,21 @@ class ApplicationsPvP(Maincog):
                 await author.add_roles(twilightBoosterRole, pvpBoosterRole)
 
                 SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]["MAIN"]
+                allRows = self.client.sheet.getAllRows(SPREADSHEET_ID, "'Balance'!A2:D")
+
+                if not allRows:
+                    await payload.member.send("Something went wrong with retrieving data from the sheets, please try again. If this continues, please contact someone from Council or Management.")
+                    return
+
+                for i in range(len(allRows)):
+                    if not allRows[i]: continue
+
+                    if allRows[i][0] == author.display_name:
+                        await author.send(self.acceptMessage)
+                        await message.delete()
+                        return
+
+                SPREADSHEET_ID = self.client.config["SPREADSHEET_ID"]["MAIN"]
                 self.client.sheet.add(SPREADSHEET_ID, "'Applications'!F3:H", [f"{data['name']}-{data['realm'].replace(' ', '')}", data['realm'].replace(' ', ''), data['faction'].capitalize()])
 
                 await author.send(self.acceptMessage)
@@ -128,7 +143,10 @@ class ApplicationsPvP(Maincog):
 
                 await message.delete()
                 msg = await self.pvpAppsChannel.send(embed=embed)
-                await message.author.send(self.receivedMessage)
+                try:
+                    await message.author.send(self.receivedMessage)
+                except Exception:
+                    pass
 
                 await msg.add_reaction(self.arenaEmoji)
                 await msg.add_reaction(self.rbgEmoji)

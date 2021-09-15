@@ -198,7 +198,7 @@ class ApplicationsMythicPlus(Maincog):
 
         try:
             rio_link = re.search(r'Raider.io Link:([^\>]*)Did someone refer you\? If so, who\?', message.content).group(1).strip()
-            referral = re.search(r'Did someone refer you\? If so, who\?([^\>]*)Would you also like\/learn how to advertise for us\? \(20% Adv Cut\)', message.content).group(1).strip()
+            referral = re.search(r'Did someone refer you\? If so, who\?([\s\S]+)Would you also like\/learn how to advertise for us\? \(20% Adv Cut\)', message.content).group(1).strip()
             advertisement = re.search(r'Would you also like\/learn how to advertise for us\? \(20% Adv Cut\)([^\>]*)', message.content).group(1).strip()
 
             link = re.search("([^/]+)/([^/]+)/?$", rio_link.split("?")[0])
@@ -218,7 +218,7 @@ class ApplicationsMythicPlus(Maincog):
                 embed.add_field(name="UserID", value=message.author.id, inline=True)
                 embed.add_field(name="Name", value=f"[{data['name']}]({data['profile_url']})", inline=True)
                 embed.add_field(name="Class", value=f"{data['class']}", inline=True)
-                embed.add_field(name="Covenant", value=f"{data['covenant']['name']}", inline=True)
+                embed.add_field(name="Covenant", value=f"{data['covenant']['name'] if data['covenant'] else 'Not found'}", inline=True)
                 embed.add_field(name="Current Season", value=f"{data['mythic_plus_scores_by_season'][0]['scores']['all']}", inline=True)
                 if len(data['mythic_plus_scores_by_season']) > 1:
                     embed.add_field(name="Last Season", value=f"{data['mythic_plus_scores_by_season'][1]['scores']['all']}", inline=True)
@@ -233,7 +233,11 @@ class ApplicationsMythicPlus(Maincog):
 
                 await message.delete()
                 msg = await self.mplusAppsChannel.send(embed=embed)
-                await message.author.send(self.receivedMessage)
+
+                try:
+                    await message.author.send(self.receivedMessage)
+                except Exception:
+                    pass
 
                 await msg.add_reaction(self.acceptEmoji)
                 await msg.add_reaction(self.declineEmoji)
